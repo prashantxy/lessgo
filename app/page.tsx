@@ -589,7 +589,7 @@ const HeroSection = () => {
           </div>
           <div className="flex items-center justify-center space-x-2 text-gray-400">
             <GraduationCap className="w-5 h-5" />
-            <span>Chandigarh University • CGPA: 8.4/10</span>
+            <span>Currently in 4th year</span>
           </div>
         </motion.div>
       </div>
