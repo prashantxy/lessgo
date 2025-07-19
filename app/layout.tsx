@@ -13,13 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-<<<<<<< HEAD
   title: "Prashant Portfolio",
   description: "Created by Prashant Dubey",
-=======
-  title: "Prashant Port-Folio",
-  description: "Created By Prashant",
->>>>>>> 50106318f7c63e2bae39b817ed07942f83532d5b
 };
 
 export default function RootLayout({
