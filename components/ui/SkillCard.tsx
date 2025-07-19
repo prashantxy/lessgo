@@ -28,7 +28,7 @@ const SkillCard = ({ skill, index }: SkillCardProps) => {
           whileHover={{ rotate: 360 }}
           transition={{ duration: 0.5 }}
         >
-          {skill.icon}
+         {skill.icon}
         </motion.div>
         <span className="text-gray-300 font-mono text-sm">{skill.name}</span>
       </div>

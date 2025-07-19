@@ -38,7 +38,8 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
             animate={{ rotate: isHovered ? 360 : 0 }}
             transition={{ duration: 0.5 }}
           >
-            {project.icon}
+            {<project.icon className="w-5 h-5" />}
+
           </motion.div>
           <motion.a
             href={project.link}

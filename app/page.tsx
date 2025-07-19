@@ -19,6 +19,7 @@ import SkillsSection from "../components/ui/SkillsSection";
 import EducationSection from "../components/ui/EducationSection";
 import YouTubeSection from "../components/ui/YoutubeSection";
 import ContactSection from "../components/ui/ContactSection";
+import { ThemeProvider } from "../components/ThemeContext";
 import { ExperienceType, ProjectType, AchievementType, SkillType, RefsType } from "../components/ui/types";
 
 export default function Home() {
@@ -63,7 +64,7 @@ export default function Home() {
       metrics: "200+ creators, 1K+ transactions",
       year: "Aug-Sep 2024",
       status: "Live",
-      icon: <Globe className="w-6 h-6" />,
+      icon: Globe,
       link: "https://neaw.vercel.app/",
     },
     {
@@ -75,7 +76,7 @@ export default function Home() {
       metrics: "1,000+ verified activities",
       year: "Oct 2024",
       status: "Live",
-      icon: <Zap className="w-6 h-6" />,
+      icon: Zap,
       link: "https://eco-versee.vercel.app/",
     },
     {
@@ -87,7 +88,7 @@ export default function Home() {
       metrics: "20% retention boost",
       year: "Aug-Sep 2024",
       status: "Live",
-      icon: <Cpu className="w-6 h-6" />,
+      icon: Cpu,
       link: "https://ai-talker.vercel.app/",
     },
     {
@@ -99,7 +100,7 @@ export default function Home() {
       metrics: "50+ active users",
       year: "Nov 2024 - Jan 2025",
       status: "Beta",
-      icon: <BookOpen className="w-6 h-6" />,
+      icon: BookOpen,
       link: "https://edutype.us/",
     },
     {
@@ -111,7 +112,7 @@ export default function Home() {
       metrics: "10+ businesses onboarded",
       year: "Jan-Feb 2025",
       status: "Live",
-      icon: <Palette className="w-6 h-6" />,
+      icon: Palette,
       link: "https://dynamicpos.vercel.app/",
     },
     {
@@ -123,7 +124,7 @@ export default function Home() {
       metrics: "5+ operators",
       year: "Mar-Apr 2025",
       status: "Live",
-      icon: <Rocket className="w-6 h-6" />,
+      icon: Rocket,
       link: "https://drone-tech-app.vercel.app/",
     },
   ];
@@ -142,7 +143,7 @@ export default function Home() {
         "Orchestrated AI-driven workflows with n8n, boosting throughput by 25%.",
         "Integrated chunk indexing for scalable pipelines across teams.",
       ],
-      icon: <Briefcase className="w-6 h-6" />,
+      icon: (props) => <Briefcase {...props} />,
     },
     {
       id: 2,
@@ -156,7 +157,7 @@ export default function Home() {
         "Implemented responsive designs with Tailwind CSS, reducing load times by 20%.",
         "Integrated real-time quiz features with WebSocket, serving 1,000+ concurrent users.",
       ],
-      icon: <Coffee className="w-6 h-6" />,
+      icon: (props) => <Coffee {...props} />,
     },
   ];
 
@@ -165,13 +166,13 @@ export default function Home() {
       {
         title: "Codeforces Expert",
         value: "max(1628)",
-        icon: <Code2 className="w-8 h-8" />,
+        icon: Code2,
         color: "from-blue-400 to-cyan-300",
       },
       {
         title: "CodeChef 4★",
         value: "max(1860)",
-        icon: <Star className="w-8 h-8" />,
+        icon: Star,
         color: "from-yellow-400 to-orange-300",
       },
     ],
@@ -179,25 +180,25 @@ export default function Home() {
       {
         title: "NASA Space Apps",
         value: "Winner",
-        icon: <Rocket className="w-8 h-8" />,
+        icon: Rocket,
         color: "from-purple-400 to-pink-300",
       },
       {
         title: "National Hackathons",
         value: "5x 1st Place",
-        icon: <Trophy className="w-8 h-8" />,
+        icon: Trophy,
         color: "from-emerald-400 to-teal-300",
       },
       {
         title: "Cryptic Hunt",
         value: "National Winner",
-        icon: <Target className="w-8 h-8" />,
+        icon: Target,
         color: "from-red-400 to-rose-300",
       },
       {
         title: "Code for Earth",
         value: "1st Place",
-        icon: <Award className="w-8 h-8" />,
+        icon: Award,
         color: "from-green-400 to-emerald-300",
       },
     ],
@@ -250,40 +251,42 @@ export default function Home() {
   }
 
   return (
-    <div ref={containerRef} className="bg-black text-white overflow-hidden relative">
-      <Navbar
-        scrollToSection={scrollToSection}
-        refs={refs}
-        isMenuOpen={isMenuOpen}
-        setIsMenuOpen={setIsMenuOpen}
-      />
-      {scrollYProgress && typeof scrollYProgress.get === "function" && (
-        <ParticleBackground scrollYProgress={scrollYProgress} />
-      )}
-      <section ref={heroRef}>
-        <HeroSection />
-      </section>
-      <section ref={experienceRef}>
-        <ExperienceSection experience={experience} />
-      </section>
-      <section ref={projectsRef}>
-        <ProjectsSection projects={projects} />
-      </section>
-      <section ref={achievementsRef}>
-        <AchievementsSection achievements={achievements} />
-      </section>
-      <section ref={skillsRef}>
-        <SkillsSection skills={skills} />
-      </section>
-      <section ref={educationRef}>
-        <EducationSection />
-      </section>
-      <section ref={youtubeRef}>
-        <YouTubeSection />
-      </section>
-      <section ref={contactRef}>
-        <ContactSection />
-      </section>
-    </div>
+    <ThemeProvider>
+      <div ref={containerRef} className="bg-white dark:bg-black text-gray-900 dark:text-white overflow-hidden relative">
+        <Navbar
+          scrollToSection={scrollToSection}
+          refs={refs}
+          isMenuOpen={isMenuOpen}
+          setIsMenuOpen={setIsMenuOpen}
+        />
+        {scrollYProgress && typeof scrollYProgress.get === "function" && (
+          <ParticleBackground scrollYProgress={scrollYProgress} />
+        )}
+        <section ref={heroRef}>
+          <HeroSection />
+        </section>
+        <section ref={experienceRef}>
+          <ExperienceSection experience={experience} />
+        </section>
+        <section ref={projectsRef}>
+          <ProjectsSection projects={projects} />
+        </section>
+        <section ref={achievementsRef}>
+          <AchievementsSection achievements={achievements} />
+        </section>
+        <section ref={skillsRef}>
+          <SkillsSection skills={skills} />
+        </section>
+        <section ref={educationRef}>
+          <EducationSection />
+        </section>
+        <section ref={youtubeRef}>
+          <YouTubeSection />
+        </section>
+        <section ref={contactRef}>
+          <ContactSection />
+        </section>
+      </div>
+    </ThemeProvider>
   );
 }

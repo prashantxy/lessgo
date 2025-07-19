@@ -2,30 +2,55 @@
 
 import { motion } from "framer-motion";
 import { Mail, Github, Linkedin, Youtube } from "lucide-react";
+import { useTheme } from "../ThemeContext";
 
 const ContactSection = () => {
+  const { theme } = useTheme();
+
   return (
-    <section className="min-h-screen flex items-center justify-center relative z-10">
+    <section
+      className={`min-h-screen flex items-center justify-center relative z-10 ${
+        theme === "light" ? "bg-white" : "bg-black"
+      } ${theme === "light" ? "text-gray-900" : "text-white"}`}
+    >
       <div className="text-center max-w-3xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <h2 className="text-7xl font-light mb-8 tracking-wide">
+          <h2
+            className={`text-5xl md:text-7xl font-light mb-8 tracking-wide ${
+              theme === "light" ? "text-gray-900" : "text-white"
+            }`}
+          >
             Let's Build
-            <span className="block text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300 bg-clip-text">
+            <span
+              className={`block text-transparent bg-clip-text ${
+                theme === "light"
+                  ? "bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500"
+                  : "bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300"
+              }`}
+            >
               The Future
             </span>
           </h2>
-          <p className="text-xl text-gray-200 mb-12 leading-relaxed font-light">
+          <p
+            className={`text-xl leading-relaxed font-light ${
+              theme === "light" ? "text-gray-700" : "text-gray-200"
+            } mb-12`}
+          >
             Passionate about turning ideas into reality. Let's collaborate to create
             innovative solutions that resonate globally.
           </p>
           <div className="flex flex-wrap justify-center gap-8 mb-8">
             <motion.a
               href="mailto:pdubey1924@gmail.com"
-              className="flex items-center space-x-2 text-emerald-400 hover:text-white transition-colors"
+              className={`flex items-center space-x-2 ${
+                theme === "light"
+                  ? "text-emerald-600 hover:text-emerald-700"
+                  : "text-emerald-400 hover:text-emerald-300"
+              } transition-colors`}
               whileHover={{ scale: 1.05, x: 5 }}
             >
               <Mail className="w-5 h-5" />
@@ -33,7 +58,11 @@ const ContactSection = () => {
             </motion.a>
             <motion.a
               href="https://github.com/prashantxy"
-              className="flex items-center space-x-2 text-emerald-400 hover:text-white transition-colors"
+              className={`flex items-center space-x-2 ${
+                theme === "light"
+                  ? "text-emerald-600 hover:text-emerald-700"
+                  : "text-emerald-400 hover:text-emerald-300"
+              } transition-colors`}
               whileHover={{ scale: 1.05, x: 5 }}
             >
               <Github className="w-5 h-5" />
@@ -41,7 +70,11 @@ const ContactSection = () => {
             </motion.a>
             <motion.a
               href="https://linkedin.com/in/prashantxy"
-              className="flex items-center space-x-2 text-emerald-400 hover:text-white transition-colors"
+              className={`flex items-center space-x-2 ${
+                theme === "light"
+                  ? "text-emerald-600 hover:text-emerald-700"
+                  : "text-emerald-400 hover:text-emerald-300"
+              } transition-colors`}
               whileHover={{ scale: 1.05, x: 5 }}
             >
               <Linkedin className="w-5 h-5" />
@@ -49,7 +82,11 @@ const ContactSection = () => {
             </motion.a>
             <motion.a
               href="https://www.youtube.com/@prashantdubey1924"
-              className="flex items-center space-x-2 text-emerald-400 hover:text-white transition-colors"
+              className={`flex items-center space-x-2 ${
+                theme === "light"
+                  ? "text-emerald-600 hover:text-emerald-700"
+                  : "text-emerald-400 hover:text-emerald-300"
+              } transition-colors`}
               whileHover={{ scale: 1.05, x: 5 }}
             >
               <Youtube className="w-5 h-5" />
@@ -58,7 +95,9 @@ const ContactSection = () => {
           </div>
 
           <motion.div
-            className="flex justify-center space-x-8 text-sm text-gray-500"
+            className={`flex justify-center space-x-8 text-sm ${
+              theme === "light" ? "text-gray-600" : "text-gray-400"
+            }`}
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
