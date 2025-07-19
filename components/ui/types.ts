@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { JSX, ReactNode } from "react";
 import { ElementType } from "react";
 import { RefObject, SVGProps, ComponentType } from "react";
 
