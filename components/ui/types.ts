@@ -2,7 +2,7 @@ import { JSX, ReactNode } from "react";
 import { ElementType } from "react";
 import { RefObject, SVGProps, ComponentType } from "react";
 
-// ✅ Reusable icon type
+// Reusable icon type
 export type IconType = ComponentType<SVGProps<SVGSVGElement>>;
 
 export type ExperienceType = {
@@ -25,20 +25,20 @@ export type ProjectType = {
   metrics: string;
   year: string;
   status: string;
-  icon: ElementType<SVGProps<SVGSVGElement>>; 
+  icon: ElementType<SVGProps<SVGSVGElement>>;
   link: string;
 };
 
 export type AchievementType = {
   title: string;
   value: string;
-  icon: IconType; // ✅ changed
+  icon: IconType;
   color: string;
 };
 
 export type SkillType = {
   name: string;
- icon: ReactNode; // ✅ changed
+  icon: ReactNode;
   category: string;
 };
 

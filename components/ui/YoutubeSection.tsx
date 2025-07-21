@@ -21,7 +21,7 @@ const YouTubeSection = () => {
           `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&maxResults=6&order=date&type=video&key=${apiKey}`
         );
         if (!res.ok) {
-          throw new Error(`API request failed with status ${res.status}`);
+          throw new Error(`API request failed with status  ${res.status} basically free quota use karliya ek din ka`);
         }
         const data = await res.json();
         if (!data.items || data.items.length === 0) {

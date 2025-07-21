@@ -34,9 +34,9 @@ export default function Home() {
   const educationRef = useRef<HTMLElement>(null);
   const youtubeRef = useRef<HTMLElement>(null);
   const contactRef = useRef<HTMLElement>(null);
-
   const [scrollYProgress, setScrollYProgress] = useState<MotionValue<number> | null>(null);
 
+  // Initialize scrollYProgress after containerRef is hydrated
   useEffect(() => {
     if (containerRef.current) {
       const { scrollYProgress } = useScroll({
@@ -47,6 +47,7 @@ export default function Home() {
     }
   }, []);
 
+  // Handle loader timeout
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -253,15 +254,13 @@ export default function Home() {
   return (
     <ThemeProvider>
       <div ref={containerRef} className="bg-white dark:bg-black text-gray-900 dark:text-white overflow-hidden relative">
+        <ParticleBackground scrollYProgress={scrollYProgress} />
         <Navbar
           scrollToSection={scrollToSection}
           refs={refs}
           isMenuOpen={isMenuOpen}
           setIsMenuOpen={setIsMenuOpen}
         />
-        {scrollYProgress && typeof scrollYProgress.get === "function" && (
-          <ParticleBackground scrollYProgress={scrollYProgress} />
-        )}
         <section ref={heroRef}>
           <HeroSection />
         </section>
