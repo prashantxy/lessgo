@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Mail, Github, Linkedin, Youtube } from "lucide-react";
+import { Mail, Github, Twitter, Youtube } from "lucide-react"; // Replaced Linkedin with Twitter
 import { useTheme } from "../ThemeContext";
 
 const ContactSection = () => {
@@ -69,7 +69,7 @@ const ContactSection = () => {
               <span>GitHub</span>
             </motion.a>
             <motion.a
-              href="https://linkedin.com/in/prashantxy"
+              href="https://x.com/pdubey1924" // Updated to X profile
               className={`flex items-center space-x-2 ${
                 theme === "light"
                   ? "text-emerald-600 hover:text-emerald-700"
@@ -77,8 +77,8 @@ const ContactSection = () => {
               } transition-colors`}
               whileHover={{ scale: 1.05, x: 5 }}
             >
-              <Linkedin className="w-5 h-5" />
-              <span>LinkedIn</span>
+              <Twitter className="w-5 h-5" /> {/* Using Twitter icon for X */}
+              <span>X</span> {/* Updated label to X */}
             </motion.a>
             <motion.a
               href="https://www.youtube.com/@prashantdubey1924"
