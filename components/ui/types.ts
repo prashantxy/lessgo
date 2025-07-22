@@ -1,3 +1,4 @@
+import { LucideIcon } from "lucide-react";
 import { JSX, ReactNode } from "react";
 import { ElementType } from "react";
 import { RefObject, SVGProps, ComponentType } from "react";
@@ -17,16 +18,16 @@ export type ExperienceType = {
 };
 
 export type ProjectType = {
-  id: number;
+  id: number; // Updated to number from string
   title: string;
   subtitle: string;
   description: string;
   tech: string[];
-  metrics: string;
-  year: string;
-  status: string;
-  icon: ElementType<SVGProps<SVGSVGElement>>;
+  metrics?: string; 
+  year?: string; 
+  status?: string; 
   link: string;
+  icon: LucideIcon;
 };
 
 export type AchievementType = {

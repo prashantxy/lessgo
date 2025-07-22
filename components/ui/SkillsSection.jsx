@@ -16,7 +16,7 @@ const SkillsSection = ({ skills }) => {
 
   const duplicatedSkillsTop = [...skills, ...skills];
   const duplicatedSkillsBottom = [...skills].reverse().concat([...skills].reverse());
-  const animationDuration = skills.length * 1;
+  const animationDuration = skills.length * 1.5;
   const carouselWidth = skills.length * 200;
 
   useEffect(() => {

@@ -21,6 +21,8 @@ import YouTubeSection from "../components/ui/YoutubeSection";
 import ContactSection from "../components/ui/ContactSection";
 import { ThemeProvider } from "../components/ThemeContext";
 import { ExperienceType, ProjectType, AchievementType, SkillType, RefsType } from "../components/ui/types";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
