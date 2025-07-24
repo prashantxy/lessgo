@@ -14,7 +14,7 @@ const HeroSection = () => {
 
   return (
     <section className="min-h-screen flex items-center justify-center relative z-10 pt-20 overflow-hidden">
-      {/* Spline 3D Robot Background */}
+      {/* Spline 3D Robot Background with Theme-Aware Overlay */}
       <div className="absolute inset-0 w-full h-full z-0">
         <iframe
           src={iframeUrl}
@@ -25,11 +25,28 @@ const HeroSection = () => {
           className={interactivity ? "" : "pointer-events-none"}
           title="Greeting Robot 3D Scene"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40" />
+        {/* Enhanced overlay to hide watermark (bottom-right corner) */}
+        <div
+          className={`absolute z-10 ${
+            theme === "light"
+              ? "bg-gray-100"
+              : "bg-gradient-to-tl from-black via-black/95 to-transparent"
+          } ${
+            "w-1/2 h-1/4 sm:w-1/3 sm:h-1/5 md:w-1/3 md:h-1/6 lg:w-1/3 lg:h-1/5"
+          } bottom-0 right-0 md:bottom-2 md:right-2`}
+        />
+        {/* Theme-aware subtle background overlay */}
+        <div
+          className={`absolute inset-0 ${
+            theme === "light"
+              ? "bg-gradient-to-b from-transparent to-gray-100/15"
+              : "bg-gradient-to-b from-transparent to-black/40"
+          }`}
+        />
       </div>
 
       {/* Foreground Content */}
-      <div className="max-w-6xl mx-auto px-6 relative z-10">
+      <div className="max-w-6xl mx-auto px-6 relative z-20"> {/* Increased z-index to 20 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
           {/* Right Side: Personal Image */}
           <motion.div
@@ -39,7 +56,7 @@ const HeroSection = () => {
             transition={{ duration: 1.2, ease: "easeOut" }}
           >
             <Image
-              src="/asset/pro.jpg"
+              src="/assets/pro.jpg"
               alt="Prashant Dubey"
               width={450}
               height={450}
