@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
+    "@splinetool/react-spline": "^4.1.0",
     "axios": "^1.10.0",
     "cal-heatmap": "^4.2.4",
     "class-variance-authority": "^0.7.1",

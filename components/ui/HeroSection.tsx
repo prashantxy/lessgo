@@ -7,10 +7,29 @@ import Image from "next/image";
 
 const HeroSection = () => {
   const { theme } = useTheme();
+  const interactivity = true; // Set to false to disable interactions
+
+  // Iframe URL (confirmed public)
+  const iframeUrl = "https://my.spline.design/genkubgreetingrobot-VWhhsWaP3gF2ktauW3kjRoKd/";
 
   return (
-    <section className="min-h-screen flex items-center justify-center relative z-10 pt-20">
-      <div className="max-w-6xl mx-auto px-6">
+    <section className="min-h-screen flex items-center justify-center relative z-10 pt-20 overflow-hidden">
+      {/* Spline 3D Robot Background */}
+      <div className="absolute inset-0 w-full h-full z-0">
+        <iframe
+          src={iframeUrl}
+          width="100%"
+          height="100%"
+          frameBorder="0"
+          loading="lazy"
+          className={interactivity ? "" : "pointer-events-none"}
+          title="Greeting Robot 3D Scene"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40" />
+      </div>
+
+      {/* Foreground Content */}
+      <div className="max-w-6xl mx-auto px-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
           {/* Right Side: Personal Image */}
           <motion.div
@@ -25,7 +44,6 @@ const HeroSection = () => {
               width={450}
               height={450}
               className="rounded-full object-cover w-64 h-64 sm:w-80 sm:h-80 lg:w-[450px] lg:h-[450px] max-w-full"
-              priority
             />
           </motion.div>
 
@@ -56,6 +74,7 @@ const HeroSection = () => {
                       ? "bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500"
                       : "bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300"
                   }`}
+                  aria-live="polite"
                 >
                   <TypeAnimation
                     sequence={[
@@ -64,6 +83,8 @@ const HeroSection = () => {
                       "Web3 Developer.",
                       2000,
                       "AI Enthusiast.",
+                      2000,
+                      "Problem Solver.",
                       2000,
                     ]}
                     wrapper="span"
