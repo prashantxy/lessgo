@@ -8,7 +8,6 @@ export default async function handler(req, res) {
   if (!GITHUB_TOKEN || !username) {
     return res.status(400).json({ error: "Missing GitHub token or username" });
   }
-
   const query = `
     query($userName: String!) {
       user(login: $userName) {
@@ -44,7 +43,6 @@ export default async function handler(req, res) {
 
     const data = response.data;
 
-    // Check for GraphQL errors
     if (data.errors) {
       console.error("GitHub GraphQL errors:", data.errors);
       return res.status(500).json({ error: data.errors });
