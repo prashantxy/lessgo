@@ -7,7 +7,6 @@ import Slider from "react-slick";
 import { ProjectType } from "./types";
 import { useTheme } from "../ThemeContext";
 
-// Custom arrow components to filter out invalid props and apply theme-based styling
 const PrevArrow = ({
   className,
   style,

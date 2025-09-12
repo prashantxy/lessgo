@@ -41,7 +41,6 @@ export default function Home() {
   const contactRef = useRef<HTMLElement>(null);
   const [scrollYProgress, setScrollYProgress] = useState<MotionValue<number> | null>(null);
 
-  // Initialize scrollYProgress after containerRef is hydrated
   useEffect(() => {
     if (containerRef.current) {
       const { scrollYProgress } = useScroll({
@@ -52,7 +51,6 @@ export default function Home() {
     }
   }, []);
 
-  // Handle loader timeout
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -109,17 +107,17 @@ export default function Home() {
     icon: BookOpen,
     link: "https://edutype.us/",
   },
-  {
+   {
     id: 5,
-    title: "DynamicPOS",
-    subtitle: "Point of Sale System",
-    description: "Developed a modern POS system with real-time inventory tracking and payment integration. Improved transaction processing speed by 40% for small businesses.",
-    tech: ["React", "Node.js", "PostgreSQL", "Stripe", "Tailwind CSS"],
-    metrics: "10+ businesses onboarded",
-    year: "Jan-Feb 2025",
+    title: "Google Calendar stats from Oauth",
+    subtitle: "Showcase of Projects and Skills",
+    description: "Designed and developed a personal portfolio website using Next.js and TypeScript, with a JavaScript backend and Framer for smooth animations. Showcases projects, skills, and achievements with a modern, responsive UI.",
+    tech: ["Next.js", "TypeScript", "Next-server","NextAuth(Oauth)","Google Calender Api", "Tailwind CSS"],
+    metrics: "1K+ visitors",
+    year: "Jul 2025",
     status: "Live",
-    icon: Palette,
-    link: "https://dynamicpos.vercel.app/",
+    icon: User,
+    link: "https://task-calender-statistics-app.vercel.app/",
   },
   {
     id: 6,
@@ -171,27 +169,39 @@ export default function Home() {
   },
   {
     id: 10,
-    title: "Personal Portfolio",
+    title: "WebRtc-Backend + Nominal FE",
     subtitle: "Showcase of Projects and Skills",
-    description: "Designed and developed a personal portfolio website using Next.js and TypeScript, with a JavaScript backend and Framer for smooth animations. Showcases projects, skills, and achievements with a modern, responsive UI.",
-    tech: ["Next.js", "TypeScript", "JavaScript", "Framer", "Tailwind CSS"],
-    metrics: "1K+ visitors",
+    description: "Designed and developed a WebRtc connection peer for Peer-to-peer connection and Learned Stun Protocol",
+    tech: ["React.js", "TypeScript", "JavaScript", "WebRtc","Prisma-PostGress", "NeonDb"],
+    metrics: "Can test",
     year: "Jul 2025",
     status: "Live",
     icon: User,
-    link: "https://moralizer.vercel.app/",
+    link: "https://github.com/prashantxy/VideoConferencing",
   },
   {
     id: 11,
-    title: "Sorting Visualizer",
-    subtitle: "Interactive Algorithm Visualization",
-    description: "Built an interactive web application to visualize sorting algorithms in real-time. Supports multiple algorithms with customizable inputs, enhancing understanding of algorithmic processes.",
-    tech: ["React", "TypeScript", "Tailwind CSS", "Canvas API"],
-    metrics: "2K+ users",
-    year: "Jun 2025",
+    title: "Vercel-Backend",
+    subtitle: "My-Own-VM Server",
+    description: " Made a system design + AWS + S3 + redis based application for backend of Vercel how it works under the hood",
+    tech: [ "TypeScript", "Cloudfare-Workers","AWS","S3","Redis","Express Server"],
+    metrics: "Testing",
+    year: "Sept 2025",
     status: "Live",
-    icon: BarChart,
-    link: "https://672f113a8e656700c9ca47c3--iridescent-gingersnap-bfae75.netlify.app/",
+    icon: User,
+    link: "https://github.com/prashantxy/My_Own_VM_Server",
+  },
+  {
+    id: 12,
+    title: "CollabDrawShare",
+    subtitle: "Backend+Front-end+TurboRepo",
+    description: "Made a Application where user will authenticate and the use a site where they can draw things and write the things on canvas and share",
+    tech: [ "TypeScript", "Turbo Repo","Canvas","Websockets","Express Server","Next.js"],
+    metrics: "Testing",
+    year: "Sept 2025",
+    status: "Live",
+    icon: User,
+    link: "https://github.com/prashantxy/My_Own_VM_Server",
   },
 ];
 
