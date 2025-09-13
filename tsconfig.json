@@ -8,7 +8,7 @@
     "noEmit": true,
     "esModuleInterop": true,
     "module": "nodenext",  
-    "moduleResolution": "nodenext",  // @ts-ignore
+    "moduleResolution": "nodenext", 
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
