@@ -208,6 +208,21 @@ export default function Home() {
   const experience: ExperienceType[] = [
     {
       id: 1,
+      company: "Notely",
+      role: "Full-Stack Product Engineer",
+      period: "Sept 2025 – Oct 2025",
+      location: "Remote",
+      type: "Stealth Start-up",
+      achievements: [
+        "Wrote various backend services for cross-platform functionality across windows, MacOS and linux",
+        "Worked with Electron js and wrote some routes and managed states",
+        "Worked on Front-end based on figma files",
+        "Integrated chunk indexing for scalable pipelines across teams.",
+      ],
+      icon: (props) => <Briefcase {...props} />,
+    },
+    {
+      id: 2,
       company: "Warren AI",
       role: "Full-Stack Developer Intern",
       period: "May 2025 – July 2025",
@@ -222,7 +237,7 @@ export default function Home() {
       icon: (props) => <Briefcase {...props} />,
     },
     {
-      id: 2,
+      id: 3,
       company: "ARL",
       role: "Full-stack App developer",
       period: "Oct 2024 – Jan 2025",
