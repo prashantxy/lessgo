@@ -318,7 +318,7 @@ export default function Home() {
     { name: "IPFS", icon: <Cloud className="w-6 h-6" />, category: "Decentralized" },
     { name: "Solana", icon: <Cloud className="w-6 h-6" />, category: "Decentralized" },
     { name: "TensorFlow", icon: <Brain className="w-6 h-6" />, category: "AI/ML" },
-    { name: "PyTorch", icon: <Brain className="w-6 h-6" />, category: "AI/ML" },
+    { name: "pyTorch", icon: <Brain className="w-6 h-6" />, category: "AI/ML" },
   ];
 
   const scrollToSection = (ref: React.RefObject<HTMLElement | null>) => {
@@ -327,7 +327,7 @@ export default function Home() {
   };
 
   const refs: RefsType = {
-    heroRef,
+    heroRef, 
     experienceRef,
     projectsRef,
     achievementsRef,
