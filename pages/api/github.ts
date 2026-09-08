@@ -1,8 +1,9 @@
 import axios from "axios";
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-  const username = req.query.username?.trim(); 
+  const username = (req.query.username as string | undefined)?.trim();
 
 
   if (!GITHUB_TOKEN || !username) {
@@ -56,7 +57,9 @@ export default async function handler(req, res) {
 
     res.status(200).json(contributions);
   } catch (error) {
-    console.error("GitHub API error:", error.response?.data || error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorData = error instanceof Error && 'response' in error ? (error as any).response?.data : null;
+    console.error("GitHub API error:", errorData || errorMessage);
     res.status(500).json({ error: "Failed to fetch GitHub contributions" });
   }
 }
