@@ -216,8 +216,8 @@ a:hover {
 
 .book {
   position: relative;
-  width: min(92vw, 62rem);
-  aspect-ratio: 3 / 2;
+  width: min(94vw, 76rem);
+  aspect-ratio: 16 / 9;
   transform-style: preserve-3d;
   transition: transform 1s var(--ease);
 }
@@ -815,7 +815,7 @@ a:hover {
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
-  width: min(92vw, 62rem);
+  width: min(94vw, 76rem);
   margin-bottom: -0.65rem; /* tuck the tab feet under the book edge */
   transition: opacity 0.45s var(--ease), transform 0.45s var(--ease);
 }
@@ -1312,11 +1312,9 @@ a:hover {
   }
 }
 
-@media (min-width: 901px) {
-  .leaf-front .project-grid,
-  .expand-col .project-grid {
-    grid-template-columns: 1fr 1fr;
-  }
+.leaf-front .project-grid,
+.expand-col .project-grid {
+  grid-template-columns: 1fr;
 }
 
 /* ============================================================
