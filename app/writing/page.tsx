@@ -20,17 +20,25 @@ export default function WritingIndex() {
           Notes on graph systems, terminal tooling, and backends I&apos;ve had to reason about
           carefully.
         </p>
-        <ul className="notes" style={{ marginTop: "1.5rem" }}>
+        <div className="writing-grid" style={{ marginTop: "1.5rem" }}>
           {posts.map((p) => (
-            <li key={p.slug}>
-              <Link href={`/writing/${p.slug}`}>
-                <span className="n-date">{formatDate(p.date)}</span>
+            <article className="writing-card" key={p.slug}>
+              <Link href={`/writing/${p.slug}`} className="wc-body">
+                <span className="wc-date">{formatDate(p.date)}</span>
                 <h2 className="h-md">{p.title}</h2>
-                <p>{p.excerpt}</p>
+                <p className="wc-blurb">{p.excerpt}</p>
+                {p.tags.length > 0 && (
+                  <ul className="wc-tags">
+                    {p.tags.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ul>
+                )}
+                <span className="wc-read">read →</span>
               </Link>
-            </li>
+            </article>
           ))}
-        </ul>
+        </div>
       </div>
     </main>
   );

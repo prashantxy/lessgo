@@ -29,9 +29,6 @@ export default function Book({ posts }: { posts: PostMeta[] }) {
   const [turning, setTurning] = useState<0 | 1 | -1>(0);
   const [expanded, setExpanded] = useState(false);
   const [ready, setReady] = useState(false);
-  const [picked, setPicked] = useState(false);
-
-  const pickUp = useCallback(() => setPicked(true), []);
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 60);
@@ -81,19 +78,12 @@ export default function Book({ posts }: { posts: PostMeta[] }) {
       }
       const t = e.target as HTMLElement;
       if (t.closest("a, button, input, textarea")) return;
-      if (!picked) {
-        if (e.key === "Enter" || e.key === " " || e.key === "ArrowRight") {
-          e.preventDefault();
-          setPicked(true);
-        }
-        return;
-      }
       if (e.key === "ArrowRight") go(flipped + 1);
       if (e.key === "ArrowLeft") go(flipped - 1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [flipped, go, expanded, picked]);
+  }, [flipped, go, expanded]);
 
   const activeSection = useMemo(() => {
     // last section whose target <= flipped
@@ -113,10 +103,7 @@ export default function Book({ posts }: { posts: PostMeta[] }) {
   }, [flipped, leaves]);
 
   return (
-    <div className="book-scene" data-ready={ready} data-open={flipped > 0} data-picked={picked}>
-      {/* landing: the notebook sitting on the desk */}
-      {!picked && <div className="desk" aria-hidden={picked} />}
-
+    <div className="book-scene" data-ready={ready} data-open={flipped > 0}>
       {/* top section tabs — hidden on the cover */}
       <div className="book-topbar" role="tablist" aria-label="Notebook sections" aria-hidden={flipped === 0}>
         <button
@@ -159,21 +146,20 @@ export default function Book({ posts }: { posts: PostMeta[] }) {
           className="book"
           data-open={flipped > 0}
           data-turning={turning}
-          onClick={!picked ? pickUp : flipped === 0 ? () => go(1) : undefined}
-          role={!picked || flipped === 0 ? "button" : undefined}
-          tabIndex={!picked || flipped === 0 ? 0 : undefined}
+          onClick={flipped === 0 ? () => go(1) : undefined}
+          role={flipped === 0 ? "button" : undefined}
+          tabIndex={flipped === 0 ? 0 : undefined}
           onKeyDown={
-            !picked || flipped === 0
+            flipped === 0
               ? (e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    if (!picked) pickUp();
-                    else go(1);
+                    go(1);
                   }
                 }
               : undefined
           }
-          aria-label={!picked ? "Pick up the notebook" : flipped === 0 ? "Open the notebook" : undefined}
+          aria-label={flipped === 0 ? "Open the notebook" : undefined}
         >
           <div className="book-block" aria-hidden="true" />
           {leaves.map((lf, i) => {
@@ -206,25 +192,6 @@ export default function Book({ posts }: { posts: PostMeta[] }) {
           <Music />
         </div>
       </div>
-
-      {!picked && (
-        <>
-          <svg className="desk-doodle" viewBox="0 0 220 150" role="img" aria-label="" aria-hidden="true">
-            <path
-              d="M14 120 C 70 96 150 92 198 40 M198 40 L172 44 M198 40 L192 66"
-              fill="none"
-              stroke="#17150f"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.55"
-            />
-          </svg>
-          <button type="button" className="desk-pickup hand" onClick={pickUp}>
-            pick up the notebook →
-          </button>
-        </>
-      )}
 
       <div className="book-controls">
         <button

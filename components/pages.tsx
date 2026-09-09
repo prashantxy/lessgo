@@ -337,17 +337,25 @@ export function WritingPage({ posts, onExpand }: { posts: PostMeta[]; onExpand?:
       <p className="page-note">
         Notes on graph systems, terminal tooling, and backends. <a href="/writing">Full archive →</a>
       </p>
-      <ul className="notes">
+      <div className="writing-grid">
         {posts.map((p) => (
-          <li key={p.slug}>
-            <a href={`/writing/${p.slug}`}>
-              <span className="n-date">{formatDate(p.date)}</span>
+          <article className="writing-card" key={p.slug}>
+            <a href={`/writing/${p.slug}`} className="wc-body">
+              <span className="wc-date">{formatDate(p.date)}</span>
               <h3>{p.title}</h3>
-              <p>{p.excerpt}</p>
+              <p className="wc-blurb">{p.excerpt}</p>
+              {p.tags.length > 0 && (
+                <ul className="wc-tags">
+                  {p.tags.map((t) => (
+                    <li key={t}>{t}</li>
+                  ))}
+                </ul>
+              )}
+              <span className="wc-read">read →</span>
             </a>
-          </li>
+          </article>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

@@ -225,107 +225,6 @@ a:hover {
   transform: none;
 }
 
-/* ---- landing: notebook resting on the desk, pre-pickup ---- */
-
-.desk {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-/* the desk surface — a sketched table filling the lower half, behind the book */
-.desk::before {
-  content: "";
-  position: absolute;
-  left: -5%;
-  right: -5%;
-  bottom: 0;
-  height: 46%;
-  background:
-    linear-gradient(to bottom, rgba(23, 21, 15, 0.04), rgba(23, 21, 15, 0.09)),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='120'%3E%3Cg fill='none' stroke='%2317150f' stroke-opacity='0.16' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M-10 20 C 140 12 320 30 610 16'/%3E%3Cpath d='M-10 52 C 180 60 360 40 610 58'/%3E%3Cpath d='M-10 86 C 120 78 380 96 610 82'/%3E%3C/g%3E%3C/svg%3E");
-  background-repeat: no-repeat, repeat;
-  background-size: 100% 100%, 600px 120px;
-  border-top: var(--stroke) solid var(--ink);
-}
-.desk-doodle {
-  position: absolute;
-  bottom: clamp(6.5rem, 20vh, 12rem);
-  left: 50%;
-  width: clamp(6rem, 11vw, 9rem);
-  height: auto;
-  transform: translateX(-1.5rem) rotate(-6deg);
-  z-index: 4;
-  pointer-events: none;
-}
-.desk-pickup {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(2.5rem, 9vh, 5.5rem);
-  transform: translateX(-50%);
-  z-index: 5;
-  pointer-events: auto;
-  font-family: var(--font-hand);
-  font-size: clamp(1rem, 0.9rem + 0.6vw, 1.35rem);
-  padding: 0.55rem 1.4rem;
-  border: var(--stroke) solid var(--ink);
-  border-radius: var(--wonk);
-  background: var(--yellow);
-  cursor: pointer;
-  box-shadow: var(--shadow-hard-sm);
-  transition: box-shadow 0.15s var(--ease);
-  animation: pickup-nudge 2.6s var(--ease) infinite;
-}
-.desk-pickup:hover {
-  box-shadow: var(--shadow-hard);
-}
-@keyframes pickup-nudge {
-  0%, 86%, 100% { transform: translateX(-50%) translateY(0); }
-  91% { transform: translateX(-50%) translateY(-5px); }
-}
-
-/* the book, reclined on the desk until it is picked up */
-.book-scene[data-picked="false"] .book,
-.book-scene[data-picked="false"] .book[data-open="false"] {
-  transform: translateX(-25%) translateY(-7%) rotateX(34deg) rotateZ(-3deg) scale(0.62);
-  transform-origin: 75% 60%;
-  cursor: pointer;
-}
-.book-scene[data-picked="false"] .book-block {
-  box-shadow:
-    3px 4px 0 rgba(23, 21, 15, 0.9),
-    6px 8px 0 rgba(23, 21, 15, 0.85),
-    40px 60px 44px -24px rgba(23, 21, 15, 0.5);
-}
-.book-scene[data-picked="false"] .book-controls {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  height: 0;
-  margin: 0;
-}
-.book-scene[data-picked="false"] .book-frame {
-  z-index: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .desk-pickup {
-    animation: none;
-  }
-}
-
-@media (max-width: 900px) {
-  .book-scene[data-picked="false"] .book,
-  .book-scene[data-picked="false"] .book[data-open="false"] {
-    transform: rotate(-3deg) scale(0.93);
-    transform-origin: center;
-  }
-  .desk-doodle {
-    transform: translateX(2rem) rotate(6deg);
-  }
-}
-
 .book-frame {
   position: relative;
 }
@@ -865,38 +764,83 @@ a:hover {
   text-align: right;
 }
 
-/* writing */
-.notes {
-  list-style: none;
-  margin: 0.5rem 0 0;
-  padding: 0;
+/* writing — card grid, mirrors the projects section */
+.writing-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.9rem 1.5rem;
+  margin-top: 0.8rem;
 }
-.notes li {
-  padding: 1rem 0;
-  border-top: 1px dashed color-mix(in srgb, var(--ink) 25%, transparent);
+.writing-card {
+  position: relative;
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--wonk);
+  background: var(--paper-2);
+  box-shadow: var(--shadow-hard-sm);
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
-.notes li:first-child {
-  border-top: 0;
+.writing-card::after {
+  /* tape strip */
+  content: "";
+  position: absolute;
+  top: -0.6rem;
+  left: 50%;
+  width: 4.4rem;
+  height: 1.35rem;
+  background: rgba(255, 255, 240, 0.55);
+  border: 1px solid rgba(23, 21, 15, 0.16);
+  border-left: 1px dashed rgba(23, 21, 15, 0.26);
+  border-right: 1px dashed rgba(23, 21, 15, 0.26);
+  transform: translateX(-50%) rotate(-3deg);
+  z-index: 3;
 }
-.notes a {
+.writing-card:hover {
+  transform: rotate(-1deg) scale(1.015);
+  box-shadow: var(--shadow-hard);
+}
+.wc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1.05rem 1.2rem 1.2rem;
   text-decoration: none;
-  display: block;
 }
-.notes .n-date {
+.wc-date {
   font-family: var(--font-hand);
   font-size: 0.82rem;
   color: var(--ink-faint);
 }
-.notes h3 {
-  font-size: 1.25rem;
-  margin: 0.2rem 0 0.3rem;
+.writing-card h3 {
+  font-size: 1.35rem;
 }
-.notes a:hover h3 {
+.writing-card:hover h3 {
   color: var(--pink);
 }
-.notes p {
+.wc-blurb {
+  font-size: 0.92rem;
   color: var(--ink-2);
-  font-size: 0.9rem;
+}
+.wc-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding-top: 0.2rem;
+  list-style: none;
+  margin: 0;
+}
+.wc-tags li {
+  font-family: var(--font-hand);
+  font-size: 0.72rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  background: var(--paper);
+}
+.wc-read {
+  font-family: var(--font-hand);
+  font-size: 0.85rem;
+  color: var(--pink);
+  margin-top: 0.2rem;
 }
 
 /* contact */
