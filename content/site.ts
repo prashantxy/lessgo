@@ -5,7 +5,7 @@ export const profile = {
   role: "full-stack & systems engineer",
   focus: ["graph-structured knowledge systems", "terminal-native tooling", "supply-chain security"],
   location: "India",
-  status: "final-year B.E. · Chandigarh University · graduating June 2026",
+  status: "B.E. · Chandigarh University · graduated June 2026",
   email: "pdubey1924@gmail.com",
   resume: "/Prashant-SDE-Resume.pdf",
   links: {
@@ -30,7 +30,7 @@ export const now = [
 ];
 
 export const highlights = [
-  "final year · Chandigarh University · 2026",
+  "B.E. · Chandigarh University · class of 2026",
   "5× national & international hackathon winner",
   "Codeforces Expert · max 1628",
   "NASA Space Apps — Mohali chapter winner",
@@ -81,17 +81,6 @@ export const work: Work[] = [
     points: [
       "Cut LLM file-upload time ~40% with Node.js worker threads.",
       "Built vector-DB retrieval on Chroma; orchestrated AI workflows with n8n and chunk indexing.",
-    ],
-  },
-  {
-    org: "ARL",
-    role: "Full-Stack App Developer",
-    period: "Oct 2024 — Jan 2025",
-    where: "Remote",
-    kind: "Logistics startup",
-    points: [
-      "Redesigned a learning platform's UI; +15% engagement, −20% load time with Tailwind.",
-      "Shipped real-time quizzes over WebSockets for 1,000+ concurrent users.",
     ],
   },
 ];
@@ -214,23 +203,34 @@ export const projects: Project[] = [
 ];
 
 export const skills: { group: string; items: string[] }[] = [
-  { group: "Languages", items: ["C++", "Rust", "Python", "TypeScript", "JavaScript", "Go"] },
+  { group: "Languages", items: ["C++", "Rust", "Python", "JavaScript", "TypeScript", "Go"] },
   {
-    group: "Frameworks",
-    items: ["React", "Next.js", "Express", "Prisma", "Tailwind", "Three.js", "Electron", "GSAP"],
+    group: "Frameworks & libraries",
+    items: ["React.js", "Next.js", "Express.js", "Prisma (ORM)", "Tailwind CSS", "Three.js", "Electron.js", "GSAP"],
   },
   {
-    group: "Data & graph",
-    items: ["PostgreSQL", "Neo4j", "Redis", "MongoDB", "ChromaDB", "NeonDB", "OpenCypher"],
+    group: "Databases",
+    items: ["PostgreSQL", "MySQL", "SQLite", "MongoDB", "NeonDB", "Redis", "Neo4j", "ChromaDB"],
   },
   {
     group: "Backend & systems",
-    items: ["Node.js", "gRPC", "WebSockets", "WebRTC", "Microservices", "Event-driven", "RPC"],
+    items: ["Node.js", "gRPC", "REST APIs", "WebSockets", "WebRTC", "Microservices", "Event-driven architecture", "RPC systems"],
   },
-  { group: "AI", items: ["OpenAI API", "RAG", "Agent orchestration", "Semantic search", "Fine-tuning"] },
   {
-    group: "Cloud & ops",
-    items: ["AWS", "Docker", "Kubernetes", "CloudFront", "S3", "GitHub Actions", "Nginx", "Cloudflare"],
+    group: "AI / ML & agents",
+    items: ["OpenAI API", "LLM fine-tuning", "Agent orchestration", "RL frameworks", "Semantic search", "RAG systems", "AI SDKs"],
+  },
+  {
+    group: "Cloud & DevOps",
+    items: ["AWS", "Docker", "Kubernetes", "CloudFront", "S3", "GitHub Actions", "Nginx", "PM2", "Cloudflare"],
+  },
+  {
+    group: "Monitoring & CI/CD",
+    items: ["Prometheus", "Grafana", "New Relic", "PostHog", "Jenkins"],
+  },
+  {
+    group: "Developer tools",
+    items: ["Git", "Linux", "Playwright", "Cheerio", "Bun", "Tauri", "Canvas APIs"],
   },
 ];
 
