@@ -47,10 +47,25 @@
   box-sizing: border-box;
 }
 
+/* Graph / engineering-paper backdrop — the grid used on the project
+   preview tiles, scaled up and turned into the page ground behind the book.
+   Painted on <html> and fixed, so it stays put while the page scrolls. */
 html {
   -webkit-text-size-adjust: 100%;
-  background: var(--paper);
   scroll-behavior: smooth;
+  background-color: #f6f2e6;
+  background-image:
+    linear-gradient(rgba(23, 21, 15, 0.16) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(23, 21, 15, 0.16) 1.5px, transparent 1.5px),
+    linear-gradient(rgba(23, 21, 15, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 21, 15, 0.07) 1px, transparent 1px);
+  background-size:
+    132px 132px,
+    132px 132px,
+    33px 33px,
+    33px 33px;
+  background-position: center;
+  background-attachment: fixed;
 }
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -61,34 +76,20 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: var(--paper);
+  background-color: transparent;
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.05rem);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
-/* Sketch-theme backdrop — faint hand-drawn strokes + cross-hatch,
-   fixed behind everything. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-color: var(--paper);
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cg fill='none' stroke='%2317150f' stroke-opacity='0.055' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M8 232 C 70 210 78 150 132 132 S 232 96 250 44'/%3E%3Cpath d='M-10 70 C 44 54 60 6 128 -6'/%3E%3Cpath d='M150 262 C 168 208 232 196 262 150'/%3E%3Cpath d='M40 20 C 70 40 74 70 60 104'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cg stroke='%2317150f' stroke-opacity='0.03' stroke-width='1'%3E%3Cpath d='M0 22 L22 0'/%3E%3Cpath d='M-4 8 L8 -4'/%3E%3Cpath d='M14 26 L26 14'/%3E%3C/g%3E%3C/svg%3E");
-  background-repeat: repeat, repeat;
-}
-
-/* Paper texture — noise + rule, applied to the page and to sheets. */
+/* faint paper noise over the grid */
 .ruled {
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-attachment: fixed;
 }
 
 ::selection {
@@ -225,6 +226,93 @@ a:hover {
   transform: none;
 }
 
+/* ---- landing: sticky notes around the book, one per section ---- */
+
+.tab-stickies {
+  position: absolute;
+  inset: 2.25rem 1.75rem;
+  z-index: 15;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+.tab-sticky {
+  position: absolute;
+  opacity: 0;
+  animation: sticky-in 0.55s var(--ease) forwards;
+}
+@keyframes sticky-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tab-sticky button {
+  position: relative;
+  pointer-events: auto;
+  display: block;
+  min-width: 18rem;
+  padding: 2.1rem 3rem 2.3rem;
+  font-family: var(--font-hand);
+  font-size: 2.8rem;
+  line-height: 1;
+  color: var(--ink);
+  text-align: center;
+  border: 3px solid rgba(23, 21, 15, 0.65);
+  background: var(--yellow);
+  box-shadow: var(--shadow-hard-lg);
+  cursor: pointer;
+  transition: transform 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+.tab-sticky button::before {
+  /* pushpin */
+  content: "";
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: var(--margin);
+  border: 3px solid var(--ink);
+  transform: translateX(-50%);
+}
+.tab-sticky button:hover {
+  transform: scale(1.06) rotate(0deg);
+  box-shadow: 14px 20px 0 rgba(23, 21, 15, 0.9);
+}
+
+.tab-sticky[data-pos="0"] { top: 0; left: 0; animation-delay: 0.12s; }
+.tab-sticky[data-pos="0"] button { background: var(--pink-soft); transform: rotate(-5deg); }
+.tab-sticky[data-pos="1"] { top: 0; right: 0; animation-delay: 0.2s; }
+.tab-sticky[data-pos="1"] button { background: var(--sky); transform: rotate(4deg); }
+.tab-sticky[data-pos="2"] { top: 38%; left: 0; animation-delay: 0.28s; }
+.tab-sticky[data-pos="2"] button { background: var(--yellow); transform: rotate(3deg); }
+.tab-sticky[data-pos="3"] { top: 35%; right: 0; animation-delay: 0.36s; }
+.tab-sticky[data-pos="3"] button { background: var(--mint); transform: rotate(-4deg); }
+.tab-sticky[data-pos="4"] { bottom: 4%; left: 0; animation-delay: 0.44s; }
+.tab-sticky[data-pos="4"] button { background: var(--sky); transform: rotate(5deg); }
+.tab-sticky[data-pos="5"] { bottom: 2%; right: 0; animation-delay: 0.52s; }
+.tab-sticky[data-pos="5"] button { background: var(--pink-soft); transform: rotate(-3deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-sticky {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+@media (max-width: 1080px) {
+  .tab-stickies {
+    display: none;
+  }
+}
+
 .book-frame {
   position: relative;
 }
@@ -242,6 +330,30 @@ a:hover {
 }
 .book[data-open="true"] {
   transform: translateX(0) rotateY(0);
+}
+
+/* desktop: the whole scene fits one screen — no page scroll */
+@media (min-width: 901px) {
+  .book-scene {
+    /* single source of truth for the open-book size */
+    --book-h: min(46rem, calc(100dvh - 9.5rem), calc(92vw * 9 / 16));
+    height: 100dvh;
+    min-height: 0;
+    justify-content: center;
+    overflow: clip;
+    gap: 0.65rem;
+    padding-block: clamp(0.5rem, 1.6vh, 1.25rem);
+    transform: none; /* keep exactly one screen tall — no scroll */
+    transition: opacity 0.7s var(--ease);
+  }
+  .book-scene:not([data-ready="true"]) {
+    opacity: 0;
+  }
+  .book {
+    width: auto;
+    height: var(--book-h);
+    max-width: 92vw;
+  }
 }
 
 /* the block of paper edges under everything — layered hard shadow */
@@ -364,12 +476,14 @@ a:hover {
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: var(--ink-faint) transparent;
+  font-size: clamp(1rem, 0.94rem + 0.3vw, 1.12rem);
+  line-height: 1.68;
 }
 .leaf-front .page {
-  padding: 3rem 4.6rem 3rem 2.6rem;
+  padding: 2.8rem 5rem 2.8rem 3.2rem;
 }
 .leaf-back .page {
-  padding: 3rem 2.6rem 3rem 4.6rem;
+  padding: 2.8rem 3.2rem 2.8rem 5rem;
 }
 .page::-webkit-scrollbar {
   width: 7px;
@@ -428,28 +542,29 @@ a:hover {
   font-family: var(--font-hand);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  font-size: 0.8rem;
+  font-size: clamp(0.78rem, 0.72rem + 0.25vw, 0.92rem);
   color: rgba(251, 249, 242, 0.7);
 }
 .cover-title {
-  font-size: clamp(2.2rem, 1.4rem + 4vw, 4.2rem);
+  font-size: clamp(2.4rem, 1.6rem + 4vw, 4.4rem);
   color: var(--paper-2);
   line-height: 1;
 }
 .cover-sub {
   font-family: var(--font-sans);
-  font-size: 0.95rem;
-  color: rgba(251, 249, 242, 0.82);
-  max-width: 26ch;
+  font-size: clamp(0.95rem, 0.88rem + 0.35vw, 1.12rem);
+  line-height: 1.5;
+  color: rgba(251, 249, 242, 0.85);
+  max-width: 30ch;
 }
 .cover-open {
   margin-top: 1.8rem;
   font-family: var(--font-hand);
-  font-size: 1rem;
-  color: rgba(251, 249, 242, 0.85);
+  font-size: clamp(1rem, 0.92rem + 0.3vw, 1.15rem);
+  color: rgba(251, 249, 242, 0.9);
   border: 2px solid rgba(255, 255, 255, 0.55);
   border-radius: var(--wonk);
-  padding: 0.4rem 1rem;
+  padding: 0.45rem 1.1rem;
   animation: wiggle 2.4s var(--ease) infinite;
 }
 @keyframes wiggle {
@@ -471,7 +586,8 @@ a:hover {
   justify-content: center;
   text-align: center;
   gap: 0.5rem;
-  padding: 3rem;
+  padding: 2rem 2rem 2.4rem;
+  overflow-y: auto;
 }
 .cover-back-inner .hand {
   font-size: 1.4rem;
@@ -480,6 +596,63 @@ a:hover {
 .cover-back-inner p {
   color: rgba(251, 249, 242, 0.75);
   font-size: 0.9rem;
+}
+
+/* ---- back cover: leave a note ---- */
+
+.leave-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: min(24rem, 82%);
+  margin: 0.8rem 0 1rem;
+}
+.ln-title {
+  font-size: 1.5rem;
+  color: var(--paper-2);
+}
+.ln-field {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--paper-2);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: var(--wonk);
+  padding: 0.5rem 0.7rem;
+}
+.ln-area {
+  resize: none;
+}
+.ln-field::placeholder {
+  color: var(--ink-faint);
+}
+.ln-field:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 1px;
+}
+.ln-send {
+  align-self: center;
+  font-family: var(--font-hand);
+  font-size: 1.05rem;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  border-radius: var(--wonk);
+  padding: 0.4rem 1.2rem;
+  text-decoration: none;
+  box-shadow: var(--shadow-hard-sm);
+  transition: transform 0.14s var(--ease), box-shadow 0.14s var(--ease);
+}
+.ln-send:hover {
+  transform: translateY(-2px) rotate(-1deg);
+  box-shadow: var(--shadow-hard);
+}
+.ln-send[data-disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+  box-shadow: none;
 }
 
 /* ---- inside front cover: the tab index ---- */
@@ -719,6 +892,63 @@ a:hover {
   margin: 0.35rem 0;
   color: var(--ink-2);
 }
+.entry .entry-no {
+  display: none;
+}
+
+/* ---- expanded experience: sticky cards that pile up as you scroll ---- */
+.stack-scroll {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0 0 22vh; /* room for the last card to reach the top of the pile */
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+.stack-card {
+  position: sticky;
+  /* each card parks a little lower than the one before it */
+  top: calc(1.25rem + var(--i) * 2.1rem);
+  padding: 1.5rem 1.7rem 1.6rem;
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--wonk);
+  background: var(--paper-2);
+  box-shadow: var(--shadow-hard);
+  /* later cards must paint over earlier ones */
+  z-index: calc(var(--i) + 1);
+}
+.stack-card:nth-child(4n + 1) {
+  background: color-mix(in srgb, var(--pink-soft) 45%, var(--paper-2));
+}
+.stack-card:nth-child(4n + 2) {
+  background: color-mix(in srgb, var(--sky) 42%, var(--paper-2));
+}
+.stack-card:nth-child(4n + 3) {
+  background: color-mix(in srgb, var(--mint) 42%, var(--paper-2));
+}
+.stack-card:nth-child(4n) {
+  background: color-mix(in srgb, var(--yellow) 38%, var(--paper-2));
+}
+.stack-card .entry-no {
+  position: absolute;
+  top: 0.9rem;
+  right: 1.2rem;
+  font-size: 2.6rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--ink) 22%, transparent);
+  pointer-events: none;
+}
+.stack-card .entry-head h3 {
+  font-size: 1.5rem;
+}
+.stack-card ul {
+  margin: 0.6rem 0 0;
+  padding-left: 1.15rem;
+}
+.stack-card li {
+  margin: 0.4rem 0;
+  color: var(--ink-2);
+}
 
 /* skills */
 .skill-groups {
@@ -742,6 +972,113 @@ a:hover {
 }
 .skill-group li {
   list-style: none;
+}
+
+/* ---- kinetic text chip: characters roll out, duplicates roll in ---- */
+.t-kinetic-btn {
+  --t-hover-bg: var(--yellow);
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--font-hand);
+  font-size: 0.82rem;
+  line-height: 1;
+  padding: 0.42em 0.9em;
+  border: var(--stroke) solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--ink);
+  white-space: nowrap;
+  cursor: default;
+  transition: border-color 0.4s cubic-bezier(0.76, 0, 0.24, 1),
+    color 0.4s cubic-bezier(0.76, 0, 0.24, 1);
+}
+/* the fill sweeps up from the bottom edge */
+.t-kinetic-btn::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 0;
+  width: 100%;
+  height: 0;
+  background: var(--t-hover-bg);
+  transition: height 0.4s cubic-bezier(0.76, 0, 0.24, 1);
+}
+.t-kinetic-btn:hover::before {
+  height: 100%;
+}
+.t-kinetic-btn[data-tone="0"] {
+  --t-hover-bg: var(--yellow);
+}
+.t-kinetic-btn[data-tone="1"] {
+  --t-hover-bg: var(--sky);
+}
+.t-kinetic-btn[data-tone="2"] {
+  --t-hover-bg: var(--mint);
+}
+.t-kinetic-btn[data-tone="3"] {
+  --t-hover-bg: var(--pink-soft);
+}
+.t-kinetic-btn[data-tone="4"] {
+  --t-hover-bg: #e8d5f5;
+}
+
+.t-char-wrapper {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  pointer-events: none;
+}
+.t-char {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  line-height: 1.2;
+}
+.t-char-space {
+  display: inline-block;
+  width: 0.28em;
+}
+.t-char-primary,
+.t-char-secondary {
+  display: inline-block;
+  will-change: transform;
+  transition: transform 0.45s cubic-bezier(0.33, 1, 0.68, 1),
+    opacity 0.45s cubic-bezier(0.33, 1, 0.68, 1);
+  transition-delay: calc(var(--i) * 22ms); /* the stagger */
+}
+.t-char-secondary {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateY(100%) rotate(8deg);
+  opacity: 0;
+}
+.t-kinetic-btn:hover .t-char-primary {
+  transform: translateY(-100%) rotate(-8deg);
+  opacity: 0;
+}
+.t-kinetic-btn:hover .t-char-secondary {
+  transform: none;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-kinetic-btn::before {
+    display: none;
+  }
+  .t-char-primary,
+  .t-char-secondary {
+    transition: none;
+    transition-delay: 0s;
+  }
+  .t-kinetic-btn:hover {
+    background: var(--t-hover-bg);
+  }
 }
 
 /* signals */
@@ -874,15 +1211,30 @@ a:hover {
   z-index: 20;
   display: flex;
   align-items: flex-end;
+  justify-content: space-between;
   gap: 0.5rem;
   width: min(94vw, 76rem);
-  margin-bottom: -0.65rem; /* tuck the tab feet under the book edge */
+  /* the row's feet land on the book's top border */
+  margin-bottom: -0.65rem;
   transition: opacity 0.45s var(--ease), transform 0.45s var(--ease);
+}
+@media (min-width: 901px) {
+  .book-topbar {
+    /* exactly the open-book width so the whole bar spans corner to corner */
+    width: min(92vw, calc(var(--book-h) * 16 / 9));
+  }
 }
 .edge-rail {
   transition: opacity 0.45s var(--ease) 0.1s, transform 0.45s var(--ease) 0.1s;
 }
 /* on the cover, no chrome — just the closed notebook */
+/* While the bar is hidden, a transform transition would be created and then
+   never ticked by the compositor — it sticks at t=0 and the tab stays lifted.
+   Killing the transition in the closed state stops it from ever starting. */
+.book-scene:not([data-open="true"]) .tb-tab,
+.book-scene:not([data-open="true"]) .tb-arrow {
+  transition: none;
+}
 .book-scene:not([data-open="true"]) .book-topbar {
   opacity: 0;
   transform: translateY(-8px);
@@ -901,10 +1253,12 @@ a:hover {
   margin: 0;
   overflow: hidden;
 }
+/* individual file-folder tabs, centred, spaced — feet tucked onto the border */
 .tb-tabs {
   display: flex;
-  gap: 0.35rem;
   flex: 1;
+  gap: 0.35rem;
+  align-items: flex-end;
   justify-content: center;
   flex-wrap: wrap;
 }
@@ -919,8 +1273,11 @@ a:hover {
   background: var(--paper-edge);
   color: var(--ink);
   cursor: pointer;
-  transform: translateY(0.45rem);
-  transition: transform 0.16s var(--ease), background 0.16s var(--ease);
+  transform: translateY(0.45rem); /* every tab shares this baseline */
+  /* NB: transform is deliberately not transitioned — a transform transition
+     started while the bar is hidden never gets ticked and sticks at t=0,
+     leaving the wrong tab lifted. */
+  transition: background 0.16s var(--ease), box-shadow 0.16s var(--ease);
 }
 .tb-tab:nth-child(5n + 1) {
   background: var(--pink-soft);
@@ -940,14 +1297,19 @@ a:hover {
 .tb-tab:hover {
   transform: translateY(0.2rem);
 }
+/* active tab pulls fully up out of the book edge */
 .tb-tab[data-active="true"] {
   transform: translateY(0);
   font-weight: 700;
   box-shadow: 0 -3px 0 var(--ink);
 }
+
+/* ---- page-turn arrows — same file-tab style, on the book's top corners ---- */
 .tb-arrow {
+  flex: 0 0 auto;
   font-family: var(--font-hand);
   font-size: 1.1rem;
+  line-height: 1;
   padding: 0.45rem 0.8rem 0.85rem;
   border: var(--stroke) solid var(--ink);
   border-bottom: 0;
@@ -956,9 +1318,10 @@ a:hover {
   color: var(--ink);
   cursor: pointer;
   transform: translateY(0.45rem);
-  transition: transform 0.16s var(--ease);
+  transition: background 0.16s var(--ease);
 }
 .tb-arrow:hover:not(:disabled) {
+  background: var(--yellow);
   transform: translateY(0.2rem);
 }
 .tb-arrow:disabled {
@@ -972,7 +1335,7 @@ a:hover {
   position: absolute;
   top: 3.5rem;
   left: 100%;
-  margin-left: -0.2rem;
+  margin-left: -0.2rem; /* tabs sit against the book's right border */
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -1097,19 +1460,27 @@ a:hover {
   gap: 0.7ch;
 }
 .expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4ch;
   font-family: var(--font-hand);
-  font-size: 1rem;
+  font-size: 0.92rem;
   line-height: 1;
-  width: 1.7rem;
-  height: 1.7rem;
+  padding: 0.32rem 0.7rem;
   border: 2px solid var(--ink);
   border-radius: 6px 8px 7px 6px;
   background: var(--yellow);
+  color: var(--ink);
   cursor: pointer;
-  transition: transform 0.12s var(--ease);
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 0.12s var(--ease), box-shadow 0.12s var(--ease);
 }
 .expand-btn:hover {
-  transform: rotate(-4deg) scale(1.08);
+  transform: rotate(-2deg) translateY(-1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.expand-btn span {
+  font-size: 1.05rem;
 }
 .sub-head {
   font-family: var(--font-hand);
@@ -1147,19 +1518,19 @@ a:hover {
 }
 .cover-notes {
   list-style: none;
-  margin: 1rem 0 0;
+  margin: 1.1rem 0 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.55rem;
   justify-content: center;
-  max-width: 24rem;
+  max-width: 27rem;
 }
 .cover-notes li {
   font-family: var(--font-hand);
-  font-size: 0.78rem;
+  font-size: clamp(0.8rem, 0.74rem + 0.28vw, 0.95rem);
   color: var(--ink);
-  padding: 0.3rem 0.7rem;
+  padding: 0.34rem 0.75rem;
   border: 2px solid var(--ink);
   box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
 }
@@ -1179,6 +1550,47 @@ a:hover {
   background: var(--pink-soft);
   transform: rotate(2deg);
 }
+
+/* the closed cover keeps full-size type; if the viewport is really short
+   its content scrolls inside the cover rather than shrinking */
+@media (min-width: 901px) {
+  .cover-inner {
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .cover-inner::-webkit-scrollbar {
+    display: none;
+  }
+  .cover-inner > * {
+    flex-shrink: 0;
+  }
+  /* the closed book only needs room for the bottom controls, so let it be
+     taller than the open (topbar-bearing) book */
+  .book-scene[data-open="false"] .book {
+    height: min(48rem, calc(100dvh - 5.25rem), calc(92vw * 9 / 16));
+  }
+}
+/* on shorter viewports, tighten the cover's vertical rhythm (not its type) */
+@media (min-width: 901px) and (max-height: 860px) {
+  .cover-inner {
+    gap: 0.35rem;
+    padding: 1.25rem;
+  }
+  .cover-notes {
+    margin-top: 0.55rem;
+    gap: 0.4rem;
+  }
+  .cover-notes li {
+    padding: 0.28rem 0.65rem;
+  }
+  .cover-open {
+    margin-top: 0.9rem;
+  }
+  .cover-title {
+    font-size: clamp(2.1rem, 1.3rem + 3.4vw, 3.7rem);
+  }
+}
+
 .flyleaf-foot {
   margin-top: auto;
   font-size: 0.9rem;
@@ -1195,10 +1607,17 @@ a:hover {
   align-items: flex-start;
   justify-content: center;
   padding: clamp(1rem, 4vw, 3rem);
-  background: rgba(23, 21, 15, 0.55);
-  backdrop-filter: blur(2px);
+  background: rgba(23, 21, 15, 0.68);
+  backdrop-filter: blur(3px);
+  overflow-x: clip;
   overflow-y: auto;
   animation: fade-in 0.25s var(--ease);
+}
+/* the arc carousel is a fixed one-screen view — never scrolls */
+.expand-overlay[data-arc] {
+  align-items: center;
+  padding: 0;
+  overflow: clip;
 }
 @keyframes fade-in {
   from {
@@ -1206,7 +1625,7 @@ a:hover {
   }
 }
 .expand-sheet {
-  width: min(64rem, 100%);
+  width: min(46rem, 100%);
   border: var(--stroke) solid var(--ink);
   border-radius: var(--wonk);
   background: var(--paper-2);
@@ -1216,6 +1635,39 @@ a:hover {
   box-shadow: var(--shadow-hard-lg);
   padding: clamp(1.5rem, 4vw, 3rem);
   animation: pop-in 0.28s var(--ease);
+}
+.expand-sheet[data-arc] {
+  /* never wider than the notebook sitting behind it */
+  width: min(92vw, calc(var(--book-h, 46rem) * 16 / 9));
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 3rem 0 3.5rem;
+  overflow: clip;
+}
+.expand-sheet[data-arc] .expand-cols {
+  gap: 0;
+}
+.expand-sheet[data-arc] .expand-back {
+  position: fixed;
+  top: 1.1rem;
+  left: 1.1rem;
+  margin: 0;
+  z-index: 320;
+}
+.expand-title {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  color: var(--paper-2);
+  text-transform: lowercase;
+  z-index: 320;
 }
 @keyframes pop-in {
   from {
@@ -1230,12 +1682,6 @@ a:hover {
   display: grid;
   grid-template-columns: 1fr;
   gap: 2.5rem;
-}
-@media (min-width: 820px) {
-  .expand-cols {
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem;
-  }
 }
 .expand-col .page,
 .expand-col .flyleaf {
@@ -1255,9 +1701,181 @@ a:hover {
 }
 
 /* ============================================================
+   Curved-arc carousel (expanded Projects / Writing, and mobile)
+   ============================================================ */
+
+.arc {
+  position: relative;
+  width: 100%;
+  outline: none;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  /* neighbours are clipped at the notebook's edges, not the viewport's */
+  overflow: clip;
+}
+.arc:focus-visible {
+  outline: 2px dashed var(--paper-2);
+  outline-offset: 8px;
+  border-radius: var(--wonk);
+}
+.arc-stage {
+  position: relative;
+  height: min(62vh, 34rem);
+  /* no preserve-3d — it would let the rotated cards escape the clip.
+     contain:paint guarantees the swung-out neighbours stop at the book's edge. */
+  overflow: clip;
+  contain: paint;
+}
+.arc-card {
+  position: absolute;
+  top: 1.25rem;
+  left: 50%;
+  width: min(40rem, 90vw);
+  margin-left: calc(min(40rem, 90vw) / -2);
+  transform-origin: 50% 1750px;
+  transition:
+    transform 0.55s var(--ease),
+    opacity 0.55s var(--ease);
+  cursor: pointer;
+  will-change: transform, opacity;
+}
+.arc-card[data-active] {
+  cursor: default;
+}
+.arc-card-inner {
+  transition: transform 0.55s var(--ease);
+}
+.arc-card[data-active] .arc-card-inner {
+  box-shadow: var(--shadow-hard-lg);
+  border-radius: var(--wonk);
+}
+/* the card fills most of the screen; keep it within the stage */
+.arc .project-card,
+.arc .writing-card {
+  max-height: min(58vh, 32rem);
+  overflow: hidden;
+}
+.arc .pc-preview {
+  aspect-ratio: 320 / 90;
+}
+.arc .pc-body,
+.arc .wc-body {
+  padding: 1.1rem 1.4rem 1.4rem;
+  gap: 0.55rem;
+}
+.arc .project-card h3,
+.arc .writing-card h3 {
+  font-size: 1.5rem;
+}
+.arc .pc-blurb,
+.arc .wc-blurb {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* big chapter number on the writing cards, itom-style */
+.wc-num {
+  display: none;
+}
+.arc .wc-num {
+  display: block;
+  font-size: clamp(2.4rem, 5.5vw, 3.4rem);
+  line-height: 0.9;
+  color: var(--pink);
+  letter-spacing: 0.02em;
+  margin-bottom: 0.15rem;
+}
+
+/* cards don't wiggle on hover while they're riding the arc */
+.arc .project-card:hover,
+.arc .writing-card:hover {
+  transform: none;
+}
+.arc-card:not([data-active]) .project-card,
+.arc-card:not([data-active]) .writing-card {
+  pointer-events: none;
+}
+
+.arc-ctl {
+  position: fixed;
+  bottom: 1.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 320;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  width: fit-content;
+  max-width: 92vw;
+  padding: 0.5rem 0.9rem;
+  background: var(--paper);
+  border: var(--stroke) solid var(--ink);
+  border-radius: 999px;
+  box-shadow: var(--shadow-hard-sm);
+  flex-wrap: wrap;
+}
+.arc-btn {
+  font-family: var(--font-hand);
+  font-size: 1.15rem;
+  line-height: 1;
+  width: 2.6rem;
+  height: 2.6rem;
+  border: var(--stroke) solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper-2);
+  box-shadow: var(--shadow-hard-sm);
+  cursor: pointer;
+  transition: transform 0.12s var(--ease), box-shadow 0.12s var(--ease);
+}
+.arc-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hard);
+}
+.arc-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.arc-count {
+  font-size: 0.95rem;
+  color: var(--ink-faint);
+  min-width: 3.5rem;
+  text-align: center;
+}
+.arc-dots {
+  display: flex;
+  gap: 0.4rem;
+}
+.arc-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), transform 0.2s var(--ease);
+}
+.arc-dot[data-on] {
+  background: var(--pink);
+  transform: scale(1.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arc-card,
+  .arc-card-inner {
+    transition: none;
+  }
+}
+
+/* ============================================================
    Flat fallback — mobile, reduced motion, no-JS
    ============================================================ */
 
+/* shared flat layout — narrow screens AND reduced-motion desktop */
 @media (max-width: 900px), (prefers-reduced-motion: reduce) {
   .book-scene {
     perspective: none;
@@ -1323,16 +1941,16 @@ a:hover {
     margin: 0 auto 1rem;
     z-index: 40;
     flex-wrap: wrap;
-  }
-  .book-topbar {
     background: var(--paper);
     border: var(--stroke) solid var(--ink);
     border-radius: var(--wonk);
     padding: 0.5rem;
     box-shadow: var(--shadow-hard-sm);
   }
-  .tb-tab,
   .tb-arrow {
+    display: none;
+  }
+  .tb-tab {
     transform: none;
     border: var(--stroke) solid var(--ink);
     border-radius: 0.5rem;
@@ -1341,8 +1959,7 @@ a:hover {
   .tb-tab[data-active="true"] {
     box-shadow: 2px 2px 0 var(--ink);
   }
-  .tb-tab:hover,
-  .tb-arrow:hover:not(:disabled) {
+  .tb-tab:hover {
     transform: none;
   }
   .edge-rail {
@@ -1369,6 +1986,171 @@ a:hover {
   }
   .project-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   Phone — "the notebook, unbound": one spiral-bound page per
+   screen, scroll-snapped, with a floating section dock.
+   ============================================================ */
+
+.mnav {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  html {
+    scroll-padding-top: 0.75rem;
+  }
+  body {
+    padding-bottom: 4.5rem; /* clear the dock */
+  }
+
+  .book-scene {
+    padding: 0;
+  }
+  .book,
+  .book[data-open] {
+    max-width: none;
+  }
+  .leaf {
+    margin-bottom: 0 !important;
+  }
+
+  /* each section = a spiral-bound sheet */
+  .leaf-face {
+    min-height: 62svh;
+    margin: 0 !important;
+    border: 0;
+    border-bottom: var(--stroke) dashed color-mix(in srgb, var(--ink) 32%, transparent);
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    scroll-margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    padding-left: 2.6rem;
+  }
+
+  /* punched spiral binding down the left edge */
+  .leaf-face::before {
+    display: block !important;
+    content: "";
+    position: absolute;
+    left: 0.5rem;
+    top: 0;
+    bottom: 0;
+    width: 0.95rem;
+    background-image: radial-gradient(
+      circle at 50% 0.55rem,
+      transparent 0.24rem,
+      currentColor 0.26rem,
+      currentColor 0.37rem,
+      transparent 0.39rem
+    );
+    background-size: 100% 1.7rem;
+    background-repeat: repeat-y;
+    color: color-mix(in srgb, var(--ink) 40%, transparent);
+    pointer-events: none;
+  }
+  .leaf-face.is-cover::before {
+    color: rgba(251, 249, 242, 0.4);
+  }
+  .leaf-face::after {
+    display: none;
+  }
+
+  .page,
+  .flyleaf {
+    flex: 1;
+    padding: 1.25rem 1.2rem 2rem !important;
+  }
+
+  /* the table-of-contents flyleaf is redundant next to the dock */
+  #sec-flyleaf {
+    display: none;
+  }
+
+  /* section heading rides along at the top of its page */
+  .page-head {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    margin: 0 -1.2rem 1rem;
+    padding: 0.65rem 1.2rem;
+    background: color-mix(in srgb, var(--paper-2) 93%, transparent);
+    backdrop-filter: blur(6px);
+    border-bottom: 2px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+  }
+  .arc-panel {
+    flex: 1;
+    padding: 1.25rem 0.9rem 2rem !important;
+    display: flex;
+    flex-direction: column;
+  }
+  .arc-panel > h2 {
+    margin-bottom: 0.2rem;
+  }
+
+  .cover-inner {
+    min-height: 100svh;
+    padding: 3rem 1.4rem;
+    border-width: 2px;
+    margin-left: 0.8rem;
+  }
+  .cover-back-inner {
+    min-height: 80svh;
+    padding: 3rem 1.5rem;
+  }
+
+  /* the flip chrome is replaced by the dock */
+  .book-topbar,
+  .edge-rail,
+  .tab-stickies,
+  .book-controls {
+    display: none !important;
+  }
+
+  /* floating section dock */
+  .mnav {
+    display: flex;
+    gap: 0.5rem;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 120;
+    padding: 0.55rem 0.8rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    background: color-mix(in srgb, var(--paper) 85%, transparent);
+    backdrop-filter: blur(10px);
+    border-top: var(--stroke) solid var(--ink);
+  }
+  .mnav::-webkit-scrollbar {
+    display: none;
+  }
+  .mnav-chip {
+    flex: 0 0 auto;
+    font-family: var(--font-hand);
+    font-size: 1.02rem;
+    line-height: 1;
+    padding: 0.5rem 0.95rem;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    background: var(--paper-2);
+    color: var(--ink);
+    text-decoration: none;
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .mnav-chip:active {
+    background: var(--yellow);
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--ink);
+  }
+  .mnav-note {
+    background: var(--pink-soft);
   }
 }
 

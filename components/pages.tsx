@@ -11,8 +11,12 @@ import {
 } from "@/content/site";
 import type { PostMeta } from "@/lib/format";
 import { formatDate } from "@/lib/format";
+import LeaveNote from "./LeaveNote";
 
 export type Section = { label: string; target: number; folio: string };
+
+/* expand a single page by its id */
+export type ExpandFn = (id: string) => void;
 
 /* top bar = section nav. target = number of leaves turned. */
 export const SECTIONS: Section[] = [
@@ -42,7 +46,7 @@ function Head({
       <span className="page-head-r">
         {onExpand && (
           <button type="button" className="expand-btn" onClick={onExpand} title="Expand this page">
-            ⤢
+            <span aria-hidden="true">⤢</span> expand
           </button>
         )}
         <span className="folio">{folio}</span>
@@ -165,6 +169,7 @@ export function BackCover() {
   return (
     <div className="cover-back-inner">
       <span className="hand">— end of the notebook —</span>
+      <LeaveNote />
       <p>
         {profile.alias} · the laboratory · {new Date().getFullYear()}
       </p>
@@ -201,10 +206,10 @@ export function Flyleaf({ onGo }: { onGo: (n: number) => void }) {
 
 /* ---------- content pages ---------- */
 
-export function AboutPage({ onExpand }: { onExpand?: () => void }) {
+export function AboutPage({ onExpand }: { onExpand?: ExpandFn }) {
   return (
     <div className="page">
-      <Head title="about" folio="p.1" onExpand={onExpand} />
+      <Head title="about" folio="p.1" onExpand={onExpand && (() => onExpand("about"))} />
       <p className="page-lead">I build systems where the structure is the point.</p>
       {about.map((para, i) => (
         <p key={i} className="page-note">
@@ -221,80 +226,135 @@ export function AboutPage({ onExpand }: { onExpand?: () => void }) {
   );
 }
 
-export function WorkPage({ onExpand }: { onExpand?: () => void }) {
+function WorkEntry({ w, i }: { w: (typeof work)[number]; i: number }) {
+  return (
+    <>
+      <div className="entry-head">
+        <h3>{w.role}</h3>
+        <span className="entry-org">— {w.org}</span>
+      </div>
+      <span className="entry-meta">
+        {w.where} · {w.kind}
+      </span>
+      <span className="entry-when">{w.period}</span>
+      <ul>
+        {w.points.map((p) => (
+          <li key={p}>{p}</li>
+        ))}
+      </ul>
+      <span className="entry-no hand" aria-hidden="true">
+        {String(work.length - i).padStart(2, "0")}
+      </span>
+    </>
+  );
+}
+
+/** `stacked` renders the roles as sticky cards that pile up as you scroll. */
+export function WorkPage({ onExpand, stacked }: { onExpand?: ExpandFn; stacked?: boolean }) {
   return (
     <div className="page">
-      <Head title="work" folio="p.2" onExpand={onExpand} />
-      <ol className="entries">
-        {work.map((w) => (
-          <li className="entry" key={w.org}>
-            <div className="entry-head">
-              <h3>{w.role}</h3>
-              <span className="entry-org">— {w.org}</span>
-            </div>
-            <span className="entry-meta">
-              {w.where} · {w.kind}
-            </span>
-            <span className="entry-when">{w.period}</span>
-            <ul>
-              {w.points.map((p) => (
-                <li key={p}>{p}</li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ol>
+      <Head title="work" folio="p.2" onExpand={onExpand && (() => onExpand("work"))} />
+      {stacked ? (
+        <ol className="stack-scroll">
+          {work.map((w, i) => (
+            <li
+              className="stack-card"
+              key={w.org}
+              style={{ "--i": i } as React.CSSProperties}
+            >
+              <WorkEntry w={w} i={i} />
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <ol className="entries">
+          {work.map((w, i) => (
+            <li className="entry" key={w.org}>
+              <WorkEntry w={w} i={i} />
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }
 
-export function ProjectsPage({ onExpand }: { onExpand?: () => void }) {
+export function ProjectCard({ p, i }: { p: Project; i: number }) {
+  return (
+    <article className="project-card">
+      <ProjectPreview p={p} i={i} />
+      <div className="pc-body">
+        <div className="pc-top">
+          <h3>{p.name}</h3>
+          <span className="pc-year">{p.year}</span>
+        </div>
+        <span className="pc-tag">{p.tag}</span>
+        {p.note && (
+          <span className="pc-note" title={p.note}>
+            ✎ {p.note}
+          </span>
+        )}
+        <p className="pc-blurb">{p.blurb}</p>
+        <ul className="pc-stack">
+          {p.stack.map((s) => (
+            <li key={s}>{s}</li>
+          ))}
+        </ul>
+        <p className="pc-links">
+          {p.links.map((l) => (
+            <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer">
+              {l.label} ↗
+            </a>
+          ))}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+export function ProjectsPage({ onExpand }: { onExpand?: ExpandFn }) {
   return (
     <div className="page">
-      <Head title="projects" folio="p.3" onExpand={onExpand} />
+      <Head title="projects" folio="p.3" onExpand={onExpand && (() => onExpand("projects"))} />
       <p className="page-note" style={{ marginBottom: "1rem" }}>
         Backend, systems, and real-time work. Tap ⤢ to spread these out.
       </p>
       <div className="project-grid">
         {projects.map((p, i) => (
-          <article className="project-card" key={p.n}>
-            <ProjectPreview p={p} i={i} />
-            <div className="pc-body">
-              <div className="pc-top">
-                <h3>{p.name}</h3>
-                <span className="pc-year">{p.year}</span>
-              </div>
-              <span className="pc-tag">{p.tag}</span>
-              {p.note && (
-                <span className="pc-note" title={p.note}>
-                  ✎ {p.note}
-                </span>
-              )}
-              <p className="pc-blurb">{p.blurb}</p>
-              <ul className="pc-stack">
-                {p.stack.map((s) => (
-                  <li key={s}>{s}</li>
-                ))}
-              </ul>
-              <p className="pc-links">
-                {p.links.map((l) => (
-                  <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer">
-                    {l.label} ↗
-                  </a>
-                ))}
-              </p>
-            </div>
-          </article>
+          <ProjectCard p={p} i={i} key={p.n} />
         ))}
       </div>
     </div>
   );
 }
 
-export function SkillsPage({ onExpand }: { onExpand?: () => void }) {
+/* ---------- kinetic-text chip (staggered character roll on hover) ---------- */
+
+export function KineticChip({ label, tone }: { label: string; tone: number }) {
+  return (
+    <span className="t-kinetic-btn" data-tone={tone}>
+      <span className="t-char-wrapper" aria-hidden="true">
+        {[...label].map((ch, i) =>
+          ch === " " ? (
+            <span className="t-char-space" key={i} />
+          ) : (
+            <span className="t-char" key={i} style={{ "--i": i } as React.CSSProperties}>
+              <span className="t-char-primary">{ch}</span>
+              <span className="t-char-secondary">{ch}</span>
+            </span>
+          ),
+        )}
+      </span>
+      <span className="hidden-a11y">{label}</span>
+    </span>
+  );
+}
+
+export function SkillsPage({ onExpand }: { onExpand?: ExpandFn }) {
+  let n = 0;
   return (
     <div className="page">
-      <Head title="stack" folio="p.4" onExpand={onExpand} />
+      <Head title="stack" folio="p.4" onExpand={onExpand && (() => onExpand("stack"))} />
       <div className="skill-groups">
         {skills.map((g) => (
           <div className="skill-group" key={g.group}>
@@ -302,7 +362,7 @@ export function SkillsPage({ onExpand }: { onExpand?: () => void }) {
             <ul>
               {g.items.map((it) => (
                 <li key={it}>
-                  <span className="pill">{it}</span>
+                  <KineticChip label={it} tone={n++ % 5} />
                 </li>
               ))}
             </ul>
@@ -313,10 +373,10 @@ export function SkillsPage({ onExpand }: { onExpand?: () => void }) {
   );
 }
 
-export function SignalsPage({ onExpand }: { onExpand?: () => void }) {
+export function SignalsPage({ onExpand }: { onExpand?: ExpandFn }) {
   return (
     <div className="page">
-      <Head title="signals" folio="p.5" onExpand={onExpand} />
+      <Head title="signals" folio="p.5" onExpand={onExpand && (() => onExpand("signals"))} />
       <p className="page-note">Competitive programming, hackathons, and the odd trophy.</p>
       <ul className="signals">
         {achievements.map((a) => (
@@ -330,37 +390,48 @@ export function SignalsPage({ onExpand }: { onExpand?: () => void }) {
   );
 }
 
-export function WritingPage({ posts, onExpand }: { posts: PostMeta[]; onExpand?: () => void }) {
+export function WritingCard({ p, n }: { p: PostMeta; n?: number }) {
+  return (
+    <article className="writing-card">
+      <a href={`/writing/${p.slug}`} className="wc-body">
+        {n != null && (
+          <span className="wc-num hand" aria-hidden="true">
+            {String(n).padStart(2, "0")}
+          </span>
+        )}
+        <span className="wc-date">{formatDate(p.date)}</span>
+        <h3>{p.title}</h3>
+        <p className="wc-blurb">{p.excerpt}</p>
+        {p.tags.length > 0 && (
+          <ul className="wc-tags">
+            {p.tags.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+        )}
+        <span className="wc-read">read →</span>
+      </a>
+    </article>
+  );
+}
+
+export function WritingPage({ posts, onExpand }: { posts: PostMeta[]; onExpand?: ExpandFn }) {
   return (
     <div className="page">
-      <Head title="writing" folio="p.6" onExpand={onExpand} />
+      <Head title="writing" folio="p.6" onExpand={onExpand && (() => onExpand("writing"))} />
       <p className="page-note">
         Notes on graph systems, terminal tooling, and backends. <a href="/writing">Full archive →</a>
       </p>
       <div className="writing-grid">
         {posts.map((p) => (
-          <article className="writing-card" key={p.slug}>
-            <a href={`/writing/${p.slug}`} className="wc-body">
-              <span className="wc-date">{formatDate(p.date)}</span>
-              <h3>{p.title}</h3>
-              <p className="wc-blurb">{p.excerpt}</p>
-              {p.tags.length > 0 && (
-                <ul className="wc-tags">
-                  {p.tags.map((t) => (
-                    <li key={t}>{t}</li>
-                  ))}
-                </ul>
-              )}
-              <span className="wc-read">read →</span>
-            </a>
-          </article>
+          <WritingCard p={p} key={p.slug} />
         ))}
       </div>
     </div>
   );
 }
 
-export function ContactPage({ onExpand }: { onExpand?: () => void }) {
+export function ContactPage({ onExpand }: { onExpand?: ExpandFn }) {
   const rows: { k: string; label: string; href: string }[] = [
     { k: "email", label: profile.email, href: `mailto:${profile.email}` },
     { k: "github", label: "github.com/prashantxy", href: profile.links.github },
@@ -378,7 +449,7 @@ export function ContactPage({ onExpand }: { onExpand?: () => void }) {
   ];
   return (
     <div className="page">
-      <Head title="contact" folio="p.7" onExpand={onExpand} />
+      <Head title="contact" folio="p.7" onExpand={onExpand && (() => onExpand("contact"))} />
       <p className="page-lead">
         Building something that needs graphs, terminals, or a careful backend?
       </p>
