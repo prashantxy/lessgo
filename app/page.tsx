@@ -1,10 +1,4 @@
-import SmoothScroller from "@/components/SmoothScroller";
-import Nav from "@/components/Nav";
-import Spine from "@/components/Spine";
-import Hero from "@/components/Hero";
-import Projects from "@/components/Projects";
-import Footer from "@/components/Footer";
-import { About, Work, Skills, Signals, Writing, Contact } from "@/components/sections";
+import Book from "@/components/Book";
 import { getPosts } from "@/lib/blog";
 import { profile } from "@/content/site";
 
@@ -26,27 +20,12 @@ export default function Home() {
 
   return (
     <>
-      <a className="skip-link" href="#about">
+      <a className="skip-link" href="#notebook">
         Skip to content
       </a>
-      <div className="field" aria-hidden="true" />
-      <Nav />
-      <Spine />
-
-      <SmoothScroller>
-        <main>
-          <Hero />
-          <About />
-          <Work />
-          <Projects />
-          <Skills />
-          <Signals />
-          <Writing posts={posts} />
-          <Contact />
-        </main>
-        <Footer />
-      </SmoothScroller>
-
+      <main id="notebook">
+        <Book posts={posts} />
+      </main>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

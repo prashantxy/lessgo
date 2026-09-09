@@ -32,20 +32,20 @@ export default async function PostPage({
   if (!post) notFound();
 
   return (
-    <main className="prose-page">
-      <Link href="/writing" className="mono back-link">
+    <main className="sheet-page">
+      <Link href="/writing" className="back-link">
         ← writing
       </Link>
-      <article>
-        <p className="mono post-date">
+      <article className="sheet">
+        <p className="post-meta">
           {formatDate(post.date)}
           {post.tags.length > 0 && <> · {post.tags.join(" · ")}</>}
         </p>
-        <h1 className="d2 post-title">{post.title}</h1>
+        <h1 className="h-lg post-title">{post.title}</h1>
         <div className="prose" dangerouslySetInnerHTML={{ __html: post.html }} />
       </article>
-      <Link href="/" className="mono back-link back-link--foot">
-        ← back to index
+      <Link href="/" className="back-link" style={{ marginTop: "2rem" }}>
+        ← back to the notebook
       </Link>
     </main>
   );

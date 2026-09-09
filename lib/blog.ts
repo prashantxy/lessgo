@@ -3,18 +3,14 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { marked } from "marked";
+import type { PostMeta } from "./format";
 
-const DIR = path.join(process.cwd(), "content/blog");
-
-export type PostMeta = {
-  slug: string;
-  title: string;
-  date: string;
-  excerpt: string;
-  tags: string[];
-};
+export type { PostMeta } from "./format";
+export { formatDate } from "./format";
 
 export type Post = PostMeta & { html: string };
+
+const DIR = path.join(process.cwd(), "content/blog");
 
 function readAll(): { meta: PostMeta; raw: string }[] {
   if (!fs.existsSync(DIR)) return [];
@@ -48,10 +44,4 @@ export function getPost(slug: string): Post | null {
   if (!found) return null;
   marked.setOptions({ gfm: true, breaks: false });
   return { ...found.meta, html: marked.parse(found.raw) as string };
-}
-
-export function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 }

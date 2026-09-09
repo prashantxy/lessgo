@@ -1,22 +1,16 @@
 import type { Metadata } from "next";
-import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import { Architects_Daughter, Inter } from "next/font/google";
 import "./globals.css";
 
-const display = Fraunces({
-  variable: "--font-display",
+const hand = Architects_Daughter({
+  variable: "--font-hand",
   subsets: ["latin"],
-  axes: ["SOFT", "WONK", "opsz"],
+  weight: "400",
   display: "swap",
 });
 
-const sans = Geist({
+const sans = Inter({
   variable: "--font-sans",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const mono = Geist_Mono({
-  variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -26,11 +20,11 @@ const SITE = "https://prashantdubey.work";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: "Prashant Dubey — full-stack & systems engineer",
+    default: "Prashant Dubey — the field notebook",
     template: "%s — Prashant Dubey",
   },
   description:
-    "Prashant Dubey builds graph-structured knowledge systems, terminal-native developer tooling, and software supply-chain security. Final-year B.E., Chandigarh University.",
+    "The working notebook of Prashant Dubey — full-stack & systems engineer. Graph-structured knowledge systems, terminal-native tooling, and software supply-chain security.",
   keywords: [
     "Prashant Dubey",
     "Keizer",
@@ -45,14 +39,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE,
-    title: "Prashant Dubey — full-stack & systems engineer",
+    title: "Prashant Dubey — the field notebook",
     description:
       "Graph-structured knowledge systems, terminal-native tooling, and supply-chain security.",
     siteName: "Prashant Dubey",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Prashant Dubey — full-stack & systems engineer",
+    title: "Prashant Dubey — the field notebook",
     description:
       "Graph-structured knowledge systems, terminal-native tooling, and supply-chain security.",
   },
@@ -63,8 +57,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
-      <body>{children}</body>
+    <html lang="en" className={`${hand.variable} ${sans.variable}`}>
+      <body className="ruled">{children}</body>
     </html>
   );
 }
