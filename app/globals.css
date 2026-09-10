@@ -1512,7 +1512,10 @@ a:hover {
 
 .cover-avatar {
   width: clamp(4.5rem, 12vw, 6.5rem);
+  /* an explicit ratio — as a flex child, height:auto alone collapses to 0 */
+  aspect-ratio: 1;
   height: auto;
+  flex: 0 0 auto;
   filter: drop-shadow(3px 4px 0 rgba(0, 0, 0, 0.55));
   transform: rotate(-3deg);
 }
@@ -1990,46 +1993,88 @@ a:hover {
 }
 
 /* ============================================================
-   Phone — "the notebook, unbound": one spiral-bound page per
-   screen, scroll-snapped, with a floating section dock.
+   Phone — the notebook as a horizontal deck: one spiral-bound
+   sheet per screen, snap-paged sideways, with a floating dock.
    ============================================================ */
 
-.mnav {
+.mnav,
+.mprogress {
   display: none;
 }
 
 @media (max-width: 900px) {
-  html {
-    scroll-padding-top: 0.75rem;
-  }
-  body {
-    padding-bottom: 4.5rem; /* clear the dock */
+  /* the deck owns the viewport — but only on the notebook route;
+     /writing and the post pages must still scroll normally */
+  html:has(#notebook),
+  body:has(#notebook) {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   .book-scene {
     padding: 0;
+    height: 100vh; /* fallback for browsers without svh */
+    height: 100svh;
+    overflow: clip;
   }
-  .book,
-  .book[data-open] {
-    max-width: none;
-  }
-  .leaf {
-    margin-bottom: 0 !important;
+  .book-frame {
+    height: 100%;
   }
 
-  /* each section = a spiral-bound sheet */
+  /* ---- the deck ---- */
+  .book,
+  .book[data-open] {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    height: 100svh;
+    margin: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .book::-webkit-scrollbar {
+    display: none;
+  }
+  /* the two faces of a leaf become sibling pages in the deck */
+  .leaf,
+  .leaf[data-flipped="true"] {
+    display: contents;
+  }
+
+  /* ---- one page ---- */
   .leaf-face {
-    min-height: 62svh;
+    position: relative;
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100vh;
+    height: 100svh;
+    min-height: 0;
     margin: 0 !important;
     border: 0;
-    border-bottom: var(--stroke) dashed color-mix(in srgb, var(--ink) 32%, transparent);
     border-radius: 0;
     box-shadow: none;
-    overflow: visible;
-    scroll-margin-top: 0.75rem;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    overflow-y: auto;
+    /* clip, not hidden: hidden would make this a horizontal scroll port and
+       swallow the sideways swipe before it reaches the deck */
+    overflow-x: clip;
+    overscroll-behavior-y: contain;
     display: flex;
     flex-direction: column;
-    padding-left: 2.6rem;
+    padding-left: 2.4rem;
+  }
+  .leaf-face::-webkit-scrollbar {
+    display: none;
   }
 
   /* punched spiral binding down the left edge */
@@ -2063,7 +2108,8 @@ a:hover {
   .page,
   .flyleaf {
     flex: 1;
-    padding: 1.25rem 1.2rem 2rem !important;
+    /* last line clears the dock */
+    padding: 1.25rem 1.2rem 6rem !important;
   }
 
   /* the table-of-contents flyleaf is redundant next to the dock */
@@ -2082,36 +2128,114 @@ a:hover {
     backdrop-filter: blur(6px);
     border-bottom: 2px dashed color-mix(in srgb, var(--ink) 22%, transparent);
   }
-  .arc-panel {
-    flex: 1;
-    padding: 1.25rem 0.9rem 2rem !important;
-    display: flex;
-    flex-direction: column;
-  }
-  .arc-panel > h2 {
-    margin-bottom: 0.2rem;
-  }
 
+  /* ---- cover: the whole landing, nothing else ---- */
+  .leaf-face.is-cover {
+    cursor: pointer;
+  }
   .cover-inner {
-    min-height: 100svh;
-    padding: 3rem 1.4rem;
+    flex: 1;
+    min-height: 0;
+    padding: 2.5rem 1.4rem 5rem;
     border-width: 2px;
     margin-left: 0.8rem;
   }
   .cover-back-inner {
-    min-height: 80svh;
-    padding: 3rem 1.5rem;
+    flex: 1;
+    min-height: 0;
+    padding: 3rem 1.5rem 6rem;
+  }
+  /* nudge to swipe, only while the cover is the page you're on */
+  .leaf-face.is-cover[data-cur="true"]::after {
+    display: block;
+    content: "swipe →";
+    position: absolute;
+    inset: auto 0 1.1rem 0;
+    width: auto;
+    height: auto;
+    background: none;
+    text-align: center;
+    font-family: var(--font-hand);
+    font-size: 0.95rem;
+    color: rgba(251, 249, 242, 0.72);
+    animation: m-nudge 1.9s var(--ease) infinite;
+    pointer-events: none;
+  }
+  @keyframes m-nudge {
+    0%,
+    70%,
+    100% {
+      transform: translateX(0);
+      opacity: 0.7;
+    }
+    85% {
+      transform: translateX(6px);
+      opacity: 1;
+    }
   }
 
-  /* the flip chrome is replaced by the dock */
+  /* ---- content lifts in each time a page lands ---- */
+  @keyframes m-rise {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+  }
+  .leaf-face[data-cur="true"] .page > *,
+  .leaf-face[data-cur="true"] .flyleaf > *,
+  .leaf-face[data-cur="true"] .cover-inner > *,
+  .leaf-face[data-cur="true"] .cover-back-inner > * {
+    animation: m-rise 0.45s var(--ease) both;
+  }
+  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(1) {
+    animation-delay: 0.03s;
+  }
+  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(2) {
+    animation-delay: 0.08s;
+  }
+  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(3) {
+    animation-delay: 0.13s;
+  }
+  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(4) {
+    animation-delay: 0.18s;
+  }
+  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(5) {
+    animation-delay: 0.23s;
+  }
+  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(n + 6) {
+    animation-delay: 0.28s;
+  }
+
+  /* the desktop flip chrome is replaced by the dock; pages are already
+     full-screen here, so the expand affordance has nothing to add */
   .book-topbar,
   .edge-rail,
   .tab-stickies,
-  .book-controls {
+  .book-controls,
+  .book-block,
+  .expand-btn {
     display: none !important;
   }
 
-  /* floating section dock */
+  /* ---- deck progress ---- */
+  .mprogress {
+    display: block;
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 3px;
+    z-index: 130;
+    background: color-mix(in srgb, var(--ink) 14%, transparent);
+    pointer-events: none;
+  }
+  .mprogress span {
+    display: block;
+    height: 100%;
+    background: var(--pink);
+    border-right: 1px solid var(--ink);
+    transition: width 0.35s var(--ease);
+  }
+
+  /* ---- floating section dock ---- */
   .mnav {
     display: flex;
     gap: 0.5rem;
@@ -2124,9 +2248,19 @@ a:hover {
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
-    background: color-mix(in srgb, var(--paper) 85%, transparent);
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
     backdrop-filter: blur(10px);
     border-top: var(--stroke) solid var(--ink);
+    /* stays out of the way while you're on the cover */
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.4s var(--ease), opacity 0.4s var(--ease);
+  }
+  .mnav[data-lit="true"] {
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
   }
   .mnav::-webkit-scrollbar {
     display: none;
@@ -2136,21 +2270,85 @@ a:hover {
     font-family: var(--font-hand);
     font-size: 1.02rem;
     line-height: 1;
-    padding: 0.5rem 0.95rem;
+    /* 44px minimum touch target */
+    min-height: 2.75rem;
+    padding: 0.5rem 1rem;
     border: 2px solid var(--ink);
     border-radius: 999px;
     background: var(--paper-2);
     color: var(--ink);
     text-decoration: none;
     box-shadow: 2px 2px 0 var(--ink);
+    cursor: pointer;
+    transition: background 0.2s var(--ease), transform 0.12s var(--ease),
+      box-shadow 0.12s var(--ease);
+  }
+  .mnav-chip[data-on="true"] {
+    background: var(--yellow);
+    font-weight: 700;
+    box-shadow: 3px 3px 0 var(--ink);
   }
   .mnav-chip:active {
-    background: var(--yellow);
     transform: translate(1px, 1px);
     box-shadow: 1px 1px 0 var(--ink);
   }
   .mnav-note {
     background: var(--pink-soft);
+  }
+
+  /* phones read one column, with room to breathe */
+  .project-grid,
+  .writing-grid {
+    gap: 1.6rem;
+  }
+  .skill-group ul {
+    gap: 0.45rem;
+  }
+}
+
+/* small tablets still get the deck, but text shouldn't run the full width */
+@media (min-width: 600px) and (max-width: 900px) {
+  .page,
+  .flyleaf,
+  .cover-inner,
+  .cover-back-inner {
+    width: 100%;
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+  .mnav {
+    justify-content: center;
+  }
+}
+
+/* landscape phones: short viewports, so trim the vertical rhythm */
+@media (max-width: 900px) and (max-height: 520px) {
+  .page,
+  .flyleaf {
+    padding: 0.9rem 1rem 5rem !important;
+  }
+  .cover-inner {
+    padding: 1.2rem 1.2rem 4rem;
+  }
+  .page-head {
+    margin-bottom: 0.6rem;
+    padding: 0.45rem 1rem;
+  }
+}
+
+@media (max-width: 900px) and (prefers-reduced-motion: reduce) {
+  .book {
+    scroll-behavior: auto;
+  }
+  .leaf-face {
+    opacity: 1;
+    transition: none;
+  }
+  .leaf-face[data-cur="true"] :is(.page, .flyleaf, .cover-inner, .cover-back-inner) > * {
+    animation: none;
+  }
+  .leaf-face.is-cover[data-cur="true"]::after {
+    animation: none;
   }
 }
 

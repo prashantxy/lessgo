@@ -32,6 +32,20 @@ type Leaf = {
   backIsCover?: boolean;
 };
 
+/* phone deck order — one screen per entry, swiped horizontally.
+   The flyleaf is skipped on phones; the dock replaces it. */
+const MOBILE_PAGES = [
+  { id: "cover", label: "cover" },
+  { id: "about", label: "about" },
+  { id: "work", label: "work" },
+  { id: "projects", label: "projects" },
+  { id: "stack", label: "stack" },
+  { id: "signals", label: "signals" },
+  { id: "writing", label: "writing" },
+  { id: "contact", label: "contact" },
+  { id: "backcover", label: "✎ note" },
+];
+
 function useIsNarrow() {
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {
@@ -65,6 +79,64 @@ export default function Book({ posts }: { posts: PostMeta[] }) {
   const openExpand = useCallback((id: string) => setExpandedId(id), []);
   const closeExpand = useCallback(() => setExpandedId(null), []);
 
+  /* ---- phone: the notebook is a horizontal, snap-paged deck ---- */
+  const pagerRef = useRef<HTMLDivElement | null>(null);
+  const [mCur, setMCur] = useState("cover");
+  const mIndex = Math.max(0, MOBILE_PAGES.findIndex((p) => p.id === mCur));
+
+  const goMobile = useCallback((id: string) => {
+    const pager = pagerRef.current;
+    const el = document.getElementById(`sec-${id}`);
+    if (!pager || !el) return;
+    pager.scrollTo({ left: el.offsetLeft, behavior: "smooth" });
+  }, []);
+
+  // track which page is centred so the dock + animations can follow along
+  useEffect(() => {
+    if (!narrow) return;
+    const pager = pagerRef.current;
+    if (!pager) return;
+    let raf = 0;
+    const sync = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const mid = pager.scrollLeft + pager.clientWidth / 2;
+        let best = "";
+        let bestDist = Infinity;
+        for (const face of pager.querySelectorAll<HTMLElement>(".leaf-face")) {
+          // offsetParent is null for the flyleaf, which phones don't show
+          if (!face.id || face.offsetParent === null) continue;
+          const dist = Math.abs(face.offsetLeft + face.offsetWidth / 2 - mid);
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = face.id.slice(4); // strip "sec-"
+          }
+        }
+        if (best) setMCur(best);
+      });
+    };
+    pager.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("resize", sync);
+    sync();
+    return () => {
+      pager.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+      cancelAnimationFrame(raf);
+    };
+  }, [narrow]);
+
+  // keep the live chip visible — scroll the dock only, never its ancestors
+  useEffect(() => {
+    if (!narrow) return;
+    const dock = document.querySelector<HTMLElement>(".mnav");
+    const chip = dock?.querySelector<HTMLElement>('.mnav-chip[data-on="true"]');
+    if (!dock || !chip) return;
+    dock.scrollTo({
+      left: chip.offsetLeft - dock.clientWidth / 2 + chip.offsetWidth / 2,
+      behavior: "smooth",
+    });
+  }, [narrow, mCur]);
+
   const writingItems = useMemo(
     () =>
       posts.map((p, i) => ({
@@ -75,35 +147,16 @@ export default function Book({ posts }: { posts: PostMeta[] }) {
     [posts],
   );
 
-  // on phones, Projects & Writing browse as an arc carousel inline
+  /* Phones page horizontally, so Projects/Writing stay vertical card lists —
+     a nested horizontal carousel would fight the deck swipe. */
   const projectsPanel = useMemo(
-    () =>
-      narrow ? (
-        <div className="page arc-panel">
-          <h2 className="h-md">projects</h2>
-          <p className="page-note">Backend, systems, and real-time work — swipe through.</p>
-          <ArcCarousel ariaLabel="Projects" items={projectItems} />
-        </div>
-      ) : (
-        <ProjectsPage onExpand={openExpand} />
-      ),
+    () => <ProjectsPage onExpand={narrow ? undefined : openExpand} />,
     [narrow, openExpand],
   );
 
   const writingPanel = useMemo(
-    () =>
-      narrow ? (
-        <div className="page arc-panel">
-          <h2 className="h-md">writing</h2>
-          <p className="page-note">
-            Notes on graph systems and backends. <a href="/writing">Full archive →</a>
-          </p>
-          <ArcCarousel ariaLabel="Writing" items={writingItems} />
-        </div>
-      ) : (
-        <WritingPage posts={posts} onExpand={openExpand} />
-      ),
-    [narrow, openExpand, posts, writingItems],
+    () => <WritingPage posts={posts} onExpand={narrow ? undefined : openExpand} />,
+    [narrow, openExpand, posts],
   );
 
   const leaves: Leaf[] = useMemo(
@@ -260,13 +313,16 @@ export default function Book({ posts }: { posts: PostMeta[] }) {
       <div className="book-frame">
         <div
           className="book"
+          ref={pagerRef}
           data-open={flipped > 0}
           data-turning={turning}
-          onClick={flipped === 0 ? () => go(1) : undefined}
-          role={flipped === 0 ? "button" : undefined}
-          tabIndex={flipped === 0 ? 0 : undefined}
+          onClick={
+            narrow ? undefined : flipped === 0 ? () => go(1) : undefined
+          }
+          role={!narrow && flipped === 0 ? "button" : undefined}
+          tabIndex={!narrow && flipped === 0 ? 0 : undefined}
           onKeyDown={
-            flipped === 0
+            !narrow && flipped === 0
               ? (e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
@@ -275,29 +331,39 @@ export default function Book({ posts }: { posts: PostMeta[] }) {
                 }
               : undefined
           }
-          aria-label={flipped === 0 ? "Open the notebook" : undefined}
+          aria-label={!narrow && flipped === 0 ? "Open the notebook" : undefined}
         >
           <div className="book-block" aria-hidden="true" />
           {leaves.map((lf, i) => {
             const isFlipped = i < flipped;
             const z = isFlipped ? i + 1 : N - i;
+            const frontSec = lf.frontDomId ?? lf.frontId;
+            const backSec = lf.backDomId ?? lf.backId;
             return (
               <div className="leaf" key={i} data-flipped={isFlipped} style={{ zIndex: z }}>
                 <div
                   className={`leaf-face leaf-front${lf.frontIsCover ? " is-cover" : ""}`}
-                  id={lf.frontDomId ? `sec-${lf.frontDomId}` : lf.frontId ? `sec-${lf.frontId}` : undefined}
+                  id={frontSec ? `sec-${frontSec}` : undefined}
+                  data-cur={narrow && frontSec ? frontSec === mCur : undefined}
+                  onClick={narrow && lf.frontIsCover ? () => goMobile("about") : undefined}
                 >
                   {lf.front}
                 </div>
                 <div
                   className={`leaf-face leaf-back${lf.backIsCover ? " is-cover" : ""}`}
-                  id={lf.backDomId ? `sec-${lf.backDomId}` : lf.backId ? `sec-${lf.backId}` : undefined}
+                  id={backSec ? `sec-${backSec}` : undefined}
+                  data-cur={narrow && backSec ? backSec === mCur : undefined}
                 >
                   {lf.back}
                 </div>
               </div>
             );
           })}
+        </div>
+
+        {/* phone: where you are in the deck */}
+        <div className="mprogress" aria-hidden="true">
+          <span style={{ width: `${((mIndex + 1) / MOBILE_PAGES.length) * 100}%` }} />
         </div>
 
         {/* right-edge sticky rail — hidden on the cover */}
@@ -335,16 +401,20 @@ export default function Book({ posts }: { posts: PostMeta[] }) {
         </button>
       </div>
 
-      {/* phone-only section dock */}
-      <nav className="mnav" aria-label="Jump to a section">
-        {SECTIONS.filter((s) => s.target > 0).map((s) => (
-          <a key={s.label} className="mnav-chip" href={`#sec-${s.label}`}>
-            {s.label}
-          </a>
+      {/* phone-only section dock — drives the deck, hidden on the cover */}
+      <nav className="mnav" aria-label="Notebook sections" data-lit={mIndex > 0}>
+        {MOBILE_PAGES.slice(1).map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className={`mnav-chip${p.id === "backcover" ? " mnav-note" : ""}`}
+            data-on={p.id === mCur}
+            aria-current={p.id === mCur ? "true" : undefined}
+            onClick={() => goMobile(p.id)}
+          >
+            {p.label}
+          </button>
         ))}
-        <a className="mnav-chip mnav-note" href="#sec-backcover">
-          ✎ note
-        </a>
       </nav>
 
       {expandedId && expandContent && (
