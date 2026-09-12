@@ -8,33 +8,39 @@
    ============================================================ */
 
 :root {
-  --paper: #f4f1e8;
-  --paper-2: #fbf9f2;
-  --paper-edge: #e7e2d2;
-  --ink: #17150f;
-  --ink-2: #4a463b;
-  --ink-faint: #837c68;
+  /* vellum, aged unevenly */
+  --paper: #e4d7b8;
+  --paper-2: #efe4c9;
+  --paper-edge: #cdbc95;
 
-  --rule: #c9d7e6; /* faint blue notebook rule */
-  --margin: #dc5050; /* red margin line */
-  --grid: #17150f12;
+  /* iron-gall ink, which browns as it ages */
+  --ink: #2b2114;
+  --ink-2: #4d3c26;
+  --ink-faint: #85724f;
 
-  --pink: #ea4aaa;
-  --pink-soft: #ffe0f0;
-  --yellow: #fde26b;
-  --sky: #bfe0f5;
-  --mint: #b9e7cf;
+  --rule: #c8b89a; /* the faint ruled frame a scribe pricked out first */
+  --margin: #8f2f22; /* rubric red, for the marginal rule */
+  --grid: #2b211412;
 
-  --stroke: 3px;
-  --wonk: 2px 255px 3px 225px / 255px 5px 225px 3px; /* hand-drawn radius */
-  --wonk-2: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  /* the pigments a scribe actually had: rubric, orpiment, lapis, verdigris */
+  --pink: #8f2f22;
+  --pink-soft: #e8cdb6;
+  --yellow: #c9a227;
+  --sky: #3f5d86;
+  --mint: #4e7a63;
 
-  --font-hand: var(--font-hand), "Bradley Hand", "Comic Sans MS", cursive;
-  --font-sans: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --stroke: 2px;
+  /* hand-ruled, not hand-drawn: a scribe's frame is straight */
+  --wonk: 2px;
+  --wonk-2: 2px;
 
-  --shadow-hard: 6px 8px 0 var(--ink);
-  --shadow-hard-sm: 3px 4px 0 var(--ink);
-  --shadow-hard-lg: 10px 14px 0 rgba(23, 21, 15, 0.85);
+  --font-hand: var(--font-hand), "Iowan Old Style", "Palatino Linotype", serif;
+  --font-sans: var(--font-sans), "Iowan Old Style", Georgia, serif;
+
+  /* ink does not cast a hard offset shadow; parchment lifts softly */
+  --shadow-hard: 0 10px 26px rgba(43, 33, 20, 0.28);
+  --shadow-hard-sm: 0 4px 12px rgba(43, 33, 20, 0.22);
+  --shadow-hard-lg: 0 18px 44px rgba(43, 33, 20, 0.34);
 
   --ease: cubic-bezier(0.3, 0, 0.2, 1);
 
@@ -47,24 +53,18 @@
   box-sizing: border-box;
 }
 
-/* Graph / engineering-paper backdrop — the grid used on the project
-   preview tiles, scaled up and turned into the page ground behind the book.
-   Painted on <html> and fixed, so it stays put while the page scrolls. */
+/* The ground behind the book: a tanned desk top, lit from above. Painted on
+   <html> and fixed, so it stays put while the notebook is read. */
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
-  background-color: #f6f2e6;
+  /* the desk the book lies on: tanned hide, unevenly lit */
+  background-color: #d8c8a4;
   background-image:
-    linear-gradient(rgba(23, 21, 15, 0.16) 1.5px, transparent 1.5px),
-    linear-gradient(90deg, rgba(23, 21, 15, 0.16) 1.5px, transparent 1.5px),
-    linear-gradient(rgba(23, 21, 15, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(23, 21, 15, 0.07) 1px, transparent 1px);
-  background-size:
-    132px 132px,
-    132px 132px,
-    33px 33px,
-    33px 33px;
-  background-position: center;
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 246, 222, 0.75), transparent 62%),
+    radial-gradient(90% 70% at 12% 88%, rgba(90, 62, 30, 0.3), transparent 60%),
+    radial-gradient(85% 70% at 88% 90%, rgba(90, 62, 30, 0.26), transparent 58%),
+    radial-gradient(60% 50% at 78% 16%, rgba(163, 128, 74, 0.35), transparent 70%);
   background-attachment: fixed;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -132,10 +132,9 @@ p {
 a {
   color: var(--ink);
   text-decoration: underline;
-  text-decoration-color: var(--margin);
-  text-decoration-style: wavy;
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, var(--margin) 70%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
   transition: color 0.15s var(--ease);
 }
 a:hover {
@@ -204,286 +203,14 @@ a:hover {
   background: var(--paper-2);
 }
 
-/* ============================================================
-   The book
-   ============================================================ */
-
-.book-scene {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.4rem;
-  min-height: 100vh;
-  padding: clamp(1.5rem, 4vh, 3.5rem) 1rem clamp(3rem, 8vh, 6rem);
-  perspective: 2800px;
-  opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
-}
-.book-scene[data-ready="true"] {
-  opacity: 1;
-  transform: none;
-}
-
-/* ---- landing: sticky notes around the book, one per section ---- */
-
-.tab-stickies {
-  position: absolute;
-  inset: 2.25rem 1.75rem;
-  z-index: 15;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  pointer-events: none;
-}
-.tab-sticky {
-  position: absolute;
-  opacity: 0;
-  animation: sticky-in 0.55s var(--ease) forwards;
-}
-@keyframes sticky-in {
-  from {
-    opacity: 0;
-    transform: translateY(-16px) scale(0.88);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.tab-sticky button {
-  position: relative;
-  pointer-events: auto;
-  display: block;
-  min-width: 18rem;
-  padding: 2.1rem 3rem 2.3rem;
-  font-family: var(--font-hand);
-  font-size: 2.8rem;
-  line-height: 1;
-  color: var(--ink);
-  text-align: center;
-  border: 3px solid rgba(23, 21, 15, 0.65);
-  background: var(--yellow);
-  box-shadow: var(--shadow-hard-lg);
-  cursor: pointer;
-  transition: transform 0.16s var(--ease), box-shadow 0.16s var(--ease);
-}
-.tab-sticky button::before {
-  /* pushpin */
-  content: "";
-  position: absolute;
-  top: 1rem;
-  left: 50%;
-  width: 1.4rem;
-  height: 1.4rem;
-  border-radius: 50%;
-  background: var(--margin);
-  border: 3px solid var(--ink);
-  transform: translateX(-50%);
-}
-.tab-sticky button:hover {
-  transform: scale(1.06) rotate(0deg);
-  box-shadow: 14px 20px 0 rgba(23, 21, 15, 0.9);
-}
-
-.tab-sticky[data-pos="0"] { top: 0; left: 0; animation-delay: 0.12s; }
-.tab-sticky[data-pos="0"] button { background: var(--pink-soft); transform: rotate(-5deg); }
-.tab-sticky[data-pos="1"] { top: 0; right: 0; animation-delay: 0.2s; }
-.tab-sticky[data-pos="1"] button { background: var(--sky); transform: rotate(4deg); }
-.tab-sticky[data-pos="2"] { top: 38%; left: 0; animation-delay: 0.28s; }
-.tab-sticky[data-pos="2"] button { background: var(--yellow); transform: rotate(3deg); }
-.tab-sticky[data-pos="3"] { top: 35%; right: 0; animation-delay: 0.36s; }
-.tab-sticky[data-pos="3"] button { background: var(--mint); transform: rotate(-4deg); }
-.tab-sticky[data-pos="4"] { bottom: 4%; left: 0; animation-delay: 0.44s; }
-.tab-sticky[data-pos="4"] button { background: var(--sky); transform: rotate(5deg); }
-.tab-sticky[data-pos="5"] { bottom: 2%; right: 0; animation-delay: 0.52s; }
-.tab-sticky[data-pos="5"] button { background: var(--pink-soft); transform: rotate(-3deg); }
-
-@media (prefers-reduced-motion: reduce) {
-  .tab-sticky {
-    opacity: 1;
-    animation: none;
-  }
-}
-
-@media (max-width: 1080px) {
-  .tab-stickies {
-    display: none;
-  }
-}
-
-.book-frame {
-  position: relative;
-}
-
-.book {
-  position: relative;
-  width: min(94vw, 76rem);
-  aspect-ratio: 16 / 9;
-  transform-style: preserve-3d;
-  transition: transform 1s var(--ease);
-}
-.book[data-open="false"] {
-  transform: translateX(-25%) rotateY(4deg) rotateX(1deg);
-  cursor: pointer;
-}
-.book[data-open="true"] {
-  transform: translateX(0) rotateY(0);
-}
-
-/* desktop: the whole scene fits one screen — no page scroll */
-@media (min-width: 901px) {
-  .book-scene {
-    /* single source of truth for the open-book size */
-    --book-h: min(46rem, calc(100dvh - 9.5rem), calc(92vw * 9 / 16));
-    height: 100dvh;
-    min-height: 0;
-    justify-content: center;
-    overflow: clip;
-    gap: 0.65rem;
-    padding-block: clamp(0.5rem, 1.6vh, 1.25rem);
-    transform: none; /* keep exactly one screen tall — no scroll */
-    transition: opacity 0.7s var(--ease);
-  }
-  .book-scene:not([data-ready="true"]) {
-    opacity: 0;
-  }
-  .book {
-    width: auto;
-    height: var(--book-h);
-    max-width: 92vw;
-  }
-}
-
-/* the block of paper edges under everything — layered hard shadow */
-.book-block {
-  position: absolute;
-  inset: 0 0 0 50%;
-  border: var(--stroke) solid var(--ink);
-  border-radius: 3px 14px 14px 3px;
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--paper-edge) 0 2px,
-    var(--paper-2) 2px 6px
-  );
-  box-shadow:
-    3px 4px 0 rgba(23, 21, 15, 0.9),
-    6px 8px 0 rgba(23, 21, 15, 0.85),
-    10px 13px 0 rgba(23, 21, 15, 0.8),
-    15px 19px 0 rgba(23, 21, 15, 0.7),
-    20px 26px 0 rgba(23, 21, 15, 0.55);
-  transition: inset 1s var(--ease), border-radius 1s var(--ease);
-}
-.book[data-open="true"] .book-block {
-  inset: 0 0 0 0;
-  border-radius: 14px;
-}
-
-.leaf {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 50%;
-  height: 100%;
-  transform-style: preserve-3d;
-  transform-origin: left center;
-  transition: transform 1s cubic-bezier(0.33, 0, 0.15, 1);
-  will-change: transform;
-}
-.leaf[data-flipped="true"] {
-  transform: rotateY(-180deg);
-}
-/* a soft sweep of shade while a page is mid-turn */
-.book[data-turning] .leaf {
-  filter: none;
-}
-.book[data-turning="1"] .leaf:not([data-flipped="true"]):first-of-type,
-.book[data-turning="-1"] .leaf[data-flipped="true"]:last-of-type {
-  box-shadow: 0 0 60px rgba(23, 21, 15, 0.18);
-}
-
-.leaf-face {
-  position: absolute;
-  inset: 0;
-  backface-visibility: hidden;
-  overflow: hidden;
-  border: var(--stroke) solid var(--ink);
-  background: var(--paper-2);
-  background-image:
-    linear-gradient(var(--rule) 1px, transparent 1px);
-  background-size: 100% 1.8rem;
-  background-position: 0 3.2rem;
-}
-.leaf-face.is-cover {
-  background: #2b2a25;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23c)' opacity='0.22'/%3E%3C/svg%3E");
-  color: var(--paper-2);
-}
-.leaf-front {
-  border-radius: 3px 12px 12px 3px;
-  transform: translateZ(0.1px);
-}
-.leaf-back {
-  border-radius: 12px 3px 3px 12px;
-  transform: rotateY(180deg) translateZ(0.1px);
-}
-/* soft shade toward the spine so the spread reads as a real gutter */
-.leaf-face::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 3.5rem;
-  pointer-events: none;
-  z-index: 2;
-}
-.leaf-front::after {
-  left: 0;
-  background: linear-gradient(90deg, rgba(23, 21, 15, 0.16), transparent);
-}
-.leaf-back::after {
-  right: 0;
-  background: linear-gradient(270deg, rgba(23, 21, 15, 0.16), transparent);
-}
-.leaf-face.is-cover::after {
-  display: none;
-}
-
-/* red margin line + tape on inner pages */
-.leaf-face:not(.is-cover)::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: color-mix(in srgb, var(--margin) 55%, transparent);
-  pointer-events: none;
-}
-.leaf-front:not(.is-cover)::before {
-  right: 3.2rem;
-}
-.leaf-back:not(.is-cover)::before {
-  left: 3.2rem;
-}
-
-/* ---- page content ---- */
-
 .page {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--ink-faint) transparent;
-  font-size: clamp(1rem, 0.94rem + 0.3vw, 1.12rem);
-  line-height: 1.68;
-}
-.leaf-front .page {
-  padding: 2.8rem 5rem 2.8rem 3.2rem;
-}
-.leaf-back .page {
-  padding: 2.8rem 3.2rem 2.8rem 5rem;
+  scrollbar-width: none;
+  font-size: 0.95rem;
+  line-height: 1.62;
 }
 .page::-webkit-scrollbar {
   width: 7px;
@@ -520,82 +247,6 @@ a:hover {
 }
 .page-note {
   color: var(--ink-2);
-}
-
-/* ---- cover ---- */
-
-.cover-inner {
-  position: absolute;
-  inset: 1.4rem;
-  border: 3px solid rgba(255, 255, 255, 0.65);
-  border-radius: 2px 40px 3px 40px / 40px 4px 40px 3px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 0.6rem;
-  padding: 2rem;
-  transform: rotate(-1.5deg);
-}
-.cover-kicker {
-  font-family: var(--font-hand);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-size: clamp(0.78rem, 0.72rem + 0.25vw, 0.92rem);
-  color: rgba(251, 249, 242, 0.7);
-}
-.cover-title {
-  font-size: clamp(2.4rem, 1.6rem + 4vw, 4.4rem);
-  color: var(--paper-2);
-  line-height: 1;
-}
-.cover-sub {
-  font-family: var(--font-sans);
-  font-size: clamp(0.95rem, 0.88rem + 0.35vw, 1.12rem);
-  line-height: 1.5;
-  color: rgba(251, 249, 242, 0.85);
-  max-width: 30ch;
-}
-.cover-open {
-  margin-top: 1.8rem;
-  font-family: var(--font-hand);
-  font-size: clamp(1rem, 0.92rem + 0.3vw, 1.15rem);
-  color: rgba(251, 249, 242, 0.9);
-  border: 2px solid rgba(255, 255, 255, 0.55);
-  border-radius: var(--wonk);
-  padding: 0.45rem 1.1rem;
-  animation: wiggle 2.4s var(--ease) infinite;
-}
-@keyframes wiggle {
-  0%,
-  100% {
-    transform: rotate(-2deg);
-  }
-  50% {
-    transform: rotate(2deg);
-  }
-}
-
-.cover-back-inner {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 0.5rem;
-  padding: 2rem 2rem 2.4rem;
-  overflow-y: auto;
-}
-.cover-back-inner .hand {
-  font-size: 1.4rem;
-  color: var(--paper-2);
-}
-.cover-back-inner p {
-  color: rgba(251, 249, 242, 0.75);
-  font-size: 0.9rem;
 }
 
 /* ---- back cover: leave a note ---- */
@@ -655,19 +306,8 @@ a:hover {
   box-shadow: none;
 }
 
-/* ---- inside front cover: the tab index ---- */
+/* ---- the table of contents, on the book's own leaf ---- */
 
-.flyleaf {
-  position: absolute;
-  inset: 0;
-  padding: 3rem 2.6rem 3rem 4.6rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-.flyleaf h2 {
-  font-size: 1.6rem;
-}
 .toc {
   list-style: none;
   margin: 0.5rem 0 0;
@@ -1200,137 +840,6 @@ a:hover {
   flex: none;
 }
 
-/* ============================================================
-   Book chrome — tabs + controls
-   ============================================================ */
-
-/* ---- top section tabs (sit on the book's top edge) ---- */
-
-.book-topbar {
-  position: relative;
-  z-index: 20;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 0.5rem;
-  width: min(94vw, 76rem);
-  /* the row's feet land on the book's top border */
-  margin-bottom: -0.65rem;
-  transition: opacity 0.45s var(--ease), transform 0.45s var(--ease);
-}
-@media (min-width: 901px) {
-  .book-topbar {
-    /* exactly the open-book width so the whole bar spans corner to corner */
-    width: min(92vw, calc(var(--book-h) * 16 / 9));
-  }
-}
-.edge-rail {
-  transition: opacity 0.45s var(--ease) 0.1s, transform 0.45s var(--ease) 0.1s;
-}
-/* on the cover, no chrome — just the closed notebook */
-/* While the bar is hidden, a transform transition would be created and then
-   never ticked by the compositor — it sticks at t=0 and the tab stays lifted.
-   Killing the transition in the closed state stops it from ever starting. */
-.book-scene:not([data-open="true"]) .tb-tab,
-.book-scene:not([data-open="true"]) .tb-arrow {
-  transition: none;
-}
-.book-scene:not([data-open="true"]) .book-topbar {
-  opacity: 0;
-  transform: translateY(-8px);
-  pointer-events: none;
-  visibility: hidden;
-  height: 0;
-  margin: 0;
-  overflow: hidden;
-}
-.book-scene:not([data-open="true"]) .edge-rail {
-  opacity: 0;
-  transform: translateX(-8px);
-  pointer-events: none;
-  visibility: hidden;
-  height: 0;
-  margin: 0;
-  overflow: hidden;
-}
-/* individual file-folder tabs, centred, spaced — feet tucked onto the border */
-.tb-tabs {
-  display: flex;
-  flex: 1;
-  gap: 0.35rem;
-  align-items: flex-end;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.tb-tab {
-  font-family: var(--font-hand);
-  font-size: 0.95rem;
-  line-height: 1;
-  padding: 0.5rem 0.9rem 0.95rem;
-  border: var(--stroke) solid var(--ink);
-  border-bottom: 0;
-  border-radius: 0.55rem 0.55rem 0 0;
-  background: var(--paper-edge);
-  color: var(--ink);
-  cursor: pointer;
-  transform: translateY(0.45rem); /* every tab shares this baseline */
-  /* NB: transform is deliberately not transitioned — a transform transition
-     started while the bar is hidden never gets ticked and sticks at t=0,
-     leaving the wrong tab lifted. */
-  transition: background 0.16s var(--ease), box-shadow 0.16s var(--ease);
-}
-.tb-tab:nth-child(5n + 1) {
-  background: var(--pink-soft);
-}
-.tb-tab:nth-child(5n + 2) {
-  background: var(--sky);
-}
-.tb-tab:nth-child(5n + 3) {
-  background: var(--yellow);
-}
-.tb-tab:nth-child(5n + 4) {
-  background: var(--mint);
-}
-.tb-tab:nth-child(5n) {
-  background: #e8d5f5;
-}
-.tb-tab:hover {
-  transform: translateY(0.2rem);
-}
-/* active tab pulls fully up out of the book edge */
-.tb-tab[data-active="true"] {
-  transform: translateY(0);
-  font-weight: 700;
-  box-shadow: 0 -3px 0 var(--ink);
-}
-
-/* ---- page-turn arrows — same file-tab style, on the book's top corners ---- */
-.tb-arrow {
-  flex: 0 0 auto;
-  font-family: var(--font-hand);
-  font-size: 1.1rem;
-  line-height: 1;
-  padding: 0.45rem 0.8rem 0.85rem;
-  border: var(--stroke) solid var(--ink);
-  border-bottom: 0;
-  border-radius: 0.55rem 0.55rem 0 0;
-  background: var(--paper-2);
-  color: var(--ink);
-  cursor: pointer;
-  transform: translateY(0.45rem);
-  transition: background 0.16s var(--ease);
-}
-.tb-arrow:hover:not(:disabled) {
-  background: var(--yellow);
-  transform: translateY(0.2rem);
-}
-.tb-arrow:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-/* ---- right-edge sticky rail ---- */
-
 .edge-rail {
   position: absolute;
   top: 3.5rem;
@@ -1415,45 +924,6 @@ a:hover {
 
 /* ---- bottom controls ---- */
 
-.book-controls {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-family: var(--font-hand);
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.book-controls .turn {
-  font-family: var(--font-hand);
-  font-size: 1.02rem;
-  padding: 0.4rem 1rem;
-  border: var(--stroke) solid var(--ink);
-  border-radius: var(--wonk);
-  background: var(--paper-2);
-  cursor: pointer;
-  box-shadow: var(--shadow-hard-sm);
-  transition: transform 0.12s var(--ease), box-shadow 0.12s var(--ease);
-}
-.book-controls .turn-expand {
-  background: var(--yellow);
-}
-.book-controls .turn:hover:not(:disabled) {
-  transform: translateY(-2px) rotate(-1deg);
-  box-shadow: var(--shadow-hard);
-}
-.book-controls .turn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.book-controls .folio-now {
-  font-size: 0.95rem;
-  color: var(--ink-faint);
-  min-width: 6rem;
-  text-align: center;
-}
-
-/* ---- page-head expand button + subsection bits ---- */
-
 .page-head-r {
   display: inline-flex;
   align-items: center;
@@ -1508,856 +978,6 @@ a:hover {
   font-family: var(--font-hand);
 }
 
-/* ---- cover extras ---- */
-
-.cover-avatar {
-  width: clamp(4.5rem, 12vw, 6.5rem);
-  /* an explicit ratio — as a flex child, height:auto alone collapses to 0 */
-  aspect-ratio: 1;
-  height: auto;
-  flex: 0 0 auto;
-  filter: drop-shadow(3px 4px 0 rgba(0, 0, 0, 0.55));
-  transform: rotate(-3deg);
-}
-.cover-notes {
-  list-style: none;
-  margin: 1.1rem 0 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  justify-content: center;
-  max-width: 27rem;
-}
-.cover-notes li {
-  font-family: var(--font-hand);
-  font-size: clamp(0.8rem, 0.74rem + 0.28vw, 0.95rem);
-  color: var(--ink);
-  padding: 0.34rem 0.75rem;
-  border: 2px solid var(--ink);
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
-}
-.cover-notes li[data-i="0"] {
-  background: var(--yellow);
-  transform: rotate(-2deg);
-}
-.cover-notes li[data-i="1"] {
-  background: var(--sky);
-  transform: rotate(1.5deg);
-}
-.cover-notes li[data-i="2"] {
-  background: var(--mint);
-  transform: rotate(-1deg);
-}
-.cover-notes li[data-i="3"] {
-  background: var(--pink-soft);
-  transform: rotate(2deg);
-}
-
-/* the closed cover keeps full-size type; if the viewport is really short
-   its content scrolls inside the cover rather than shrinking */
-@media (min-width: 901px) {
-  .cover-inner {
-    overflow-y: auto;
-    scrollbar-width: none;
-  }
-  .cover-inner::-webkit-scrollbar {
-    display: none;
-  }
-  .cover-inner > * {
-    flex-shrink: 0;
-  }
-  /* the closed book only needs room for the bottom controls, so let it be
-     taller than the open (topbar-bearing) book */
-  .book-scene[data-open="false"] .book {
-    height: min(48rem, calc(100dvh - 5.25rem), calc(92vw * 9 / 16));
-  }
-}
-/* on shorter viewports, tighten the cover's vertical rhythm (not its type) */
-@media (min-width: 901px) and (max-height: 860px) {
-  .cover-inner {
-    gap: 0.35rem;
-    padding: 1.25rem;
-  }
-  .cover-notes {
-    margin-top: 0.55rem;
-    gap: 0.4rem;
-  }
-  .cover-notes li {
-    padding: 0.28rem 0.65rem;
-  }
-  .cover-open {
-    margin-top: 0.9rem;
-  }
-  .cover-title {
-    font-size: clamp(2.1rem, 1.3rem + 3.4vw, 3.7rem);
-  }
-}
-
-.flyleaf-foot {
-  margin-top: auto;
-  font-size: 0.9rem;
-  color: var(--ink-faint);
-}
-
-/* ---- expand overlay ---- */
-
-.expand-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 300;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: clamp(1rem, 4vw, 3rem);
-  background: rgba(23, 21, 15, 0.68);
-  backdrop-filter: blur(3px);
-  overflow-x: clip;
-  overflow-y: auto;
-  animation: fade-in 0.25s var(--ease);
-}
-/* the arc carousel is a fixed one-screen view — never scrolls */
-.expand-overlay[data-arc] {
-  align-items: center;
-  padding: 0;
-  overflow: clip;
-}
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-}
-.expand-sheet {
-  width: min(46rem, 100%);
-  border: var(--stroke) solid var(--ink);
-  border-radius: var(--wonk);
-  background: var(--paper-2);
-  background-image: linear-gradient(var(--rule) 1px, transparent 1px);
-  background-size: 100% 1.9rem;
-  background-position: 0 5rem;
-  box-shadow: var(--shadow-hard-lg);
-  padding: clamp(1.5rem, 4vw, 3rem);
-  animation: pop-in 0.28s var(--ease);
-}
-.expand-sheet[data-arc] {
-  /* never wider than the notebook sitting behind it */
-  width: min(92vw, calc(var(--book-h, 46rem) * 16 / 9));
-  height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  padding: 3rem 0 3.5rem;
-  overflow: clip;
-}
-.expand-sheet[data-arc] .expand-cols {
-  gap: 0;
-}
-.expand-sheet[data-arc] .expand-back {
-  position: fixed;
-  top: 1.1rem;
-  left: 1.1rem;
-  margin: 0;
-  z-index: 320;
-}
-.expand-title {
-  position: fixed;
-  top: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  margin: 0;
-  color: var(--paper-2);
-  text-transform: lowercase;
-  z-index: 320;
-}
-@keyframes pop-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.98);
-  }
-}
-.expand-back {
-  margin-bottom: 1.5rem;
-}
-.expand-cols {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2.5rem;
-}
-.expand-col .page,
-.expand-col .flyleaf {
-  position: static;
-  inset: auto;
-  overflow: visible;
-  padding: 0 !important;
-}
-.expand-col .cover-inner,
-.expand-col .cover-back-inner {
-  position: static;
-  inset: auto;
-  transform: none;
-}
-.expand-col .leaf-face::before {
-  display: none;
-}
-
-/* ============================================================
-   Curved-arc carousel (expanded Projects / Writing, and mobile)
-   ============================================================ */
-
-.arc {
-  position: relative;
-  width: 100%;
-  outline: none;
-  touch-action: pan-y;
-  -webkit-user-select: none;
-  user-select: none;
-  /* neighbours are clipped at the notebook's edges, not the viewport's */
-  overflow: clip;
-}
-.arc:focus-visible {
-  outline: 2px dashed var(--paper-2);
-  outline-offset: 8px;
-  border-radius: var(--wonk);
-}
-.arc-stage {
-  position: relative;
-  height: min(62vh, 34rem);
-  /* no preserve-3d — it would let the rotated cards escape the clip.
-     contain:paint guarantees the swung-out neighbours stop at the book's edge. */
-  overflow: clip;
-  contain: paint;
-}
-.arc-card {
-  position: absolute;
-  top: 1.25rem;
-  left: 50%;
-  width: min(40rem, 90vw);
-  margin-left: calc(min(40rem, 90vw) / -2);
-  transform-origin: 50% 1750px;
-  transition:
-    transform 0.55s var(--ease),
-    opacity 0.55s var(--ease);
-  cursor: pointer;
-  will-change: transform, opacity;
-}
-.arc-card[data-active] {
-  cursor: default;
-}
-.arc-card-inner {
-  transition: transform 0.55s var(--ease);
-}
-.arc-card[data-active] .arc-card-inner {
-  box-shadow: var(--shadow-hard-lg);
-  border-radius: var(--wonk);
-}
-/* the card fills most of the screen; keep it within the stage */
-.arc .project-card,
-.arc .writing-card {
-  max-height: min(58vh, 32rem);
-  overflow: hidden;
-}
-.arc .pc-preview {
-  aspect-ratio: 320 / 90;
-}
-.arc .pc-body,
-.arc .wc-body {
-  padding: 1.1rem 1.4rem 1.4rem;
-  gap: 0.55rem;
-}
-.arc .project-card h3,
-.arc .writing-card h3 {
-  font-size: 1.5rem;
-}
-.arc .pc-blurb,
-.arc .wc-blurb {
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-/* big chapter number on the writing cards, itom-style */
-.wc-num {
-  display: none;
-}
-.arc .wc-num {
-  display: block;
-  font-size: clamp(2.4rem, 5.5vw, 3.4rem);
-  line-height: 0.9;
-  color: var(--pink);
-  letter-spacing: 0.02em;
-  margin-bottom: 0.15rem;
-}
-
-/* cards don't wiggle on hover while they're riding the arc */
-.arc .project-card:hover,
-.arc .writing-card:hover {
-  transform: none;
-}
-.arc-card:not([data-active]) .project-card,
-.arc-card:not([data-active]) .writing-card {
-  pointer-events: none;
-}
-
-.arc-ctl {
-  position: fixed;
-  bottom: 1.4rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 320;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.85rem;
-  width: fit-content;
-  max-width: 92vw;
-  padding: 0.5rem 0.9rem;
-  background: var(--paper);
-  border: var(--stroke) solid var(--ink);
-  border-radius: 999px;
-  box-shadow: var(--shadow-hard-sm);
-  flex-wrap: wrap;
-}
-.arc-btn {
-  font-family: var(--font-hand);
-  font-size: 1.15rem;
-  line-height: 1;
-  width: 2.6rem;
-  height: 2.6rem;
-  border: var(--stroke) solid var(--ink);
-  border-radius: 50%;
-  background: var(--paper-2);
-  box-shadow: var(--shadow-hard-sm);
-  cursor: pointer;
-  transition: transform 0.12s var(--ease), box-shadow 0.12s var(--ease);
-}
-.arc-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-hard);
-}
-.arc-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-.arc-count {
-  font-size: 0.95rem;
-  color: var(--ink-faint);
-  min-width: 3.5rem;
-  text-align: center;
-}
-.arc-dots {
-  display: flex;
-  gap: 0.4rem;
-}
-.arc-dot {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  border: 2px solid var(--ink);
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-  transition: background 0.2s var(--ease), transform 0.2s var(--ease);
-}
-.arc-dot[data-on] {
-  background: var(--pink);
-  transform: scale(1.25);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .arc-card,
-  .arc-card-inner {
-    transition: none;
-  }
-}
-
-/* ============================================================
-   Flat fallback — mobile, reduced motion, no-JS
-   ============================================================ */
-
-/* shared flat layout — narrow screens AND reduced-motion desktop */
-@media (max-width: 900px), (prefers-reduced-motion: reduce) {
-  .book-scene {
-    perspective: none;
-    padding-top: 1.5rem;
-    display: block;
-  }
-  .book,
-  .book[data-open] {
-    width: 100%;
-    max-width: 40rem;
-    margin: 0 auto;
-    aspect-ratio: auto;
-    transform: none;
-  }
-  .book-block {
-    display: none;
-  }
-  .leaf,
-  .leaf[data-flipped="true"] {
-    position: static;
-    width: 100%;
-    height: auto;
-    transform: none;
-    margin-bottom: 1.6rem;
-  }
-  .leaf-face {
-    position: static;
-    inset: auto;
-    backface-visibility: visible;
-    border-radius: var(--wonk);
-    box-shadow: var(--shadow-hard-sm);
-  }
-  .leaf-face.leaf-back {
-    transform: none;
-    margin-top: 1.6rem;
-  }
-  .leaf-face::before {
-    display: none !important;
-  }
-  .page,
-  .flyleaf {
-    position: static;
-    overflow: visible;
-    padding: 2rem 1.4rem 2.2rem !important;
-  }
-  .cover-inner {
-    position: static;
-    inset: auto;
-    transform: none;
-    min-height: 60vh;
-  }
-  .cover-back-inner {
-    position: static;
-  }
-  .book-frame {
-    width: 100%;
-  }
-  .book-topbar {
-    position: sticky;
-    top: 0.4rem;
-    width: 100%;
-    max-width: 40rem;
-    margin: 0 auto 1rem;
-    z-index: 40;
-    flex-wrap: wrap;
-    background: var(--paper);
-    border: var(--stroke) solid var(--ink);
-    border-radius: var(--wonk);
-    padding: 0.5rem;
-    box-shadow: var(--shadow-hard-sm);
-  }
-  .tb-arrow {
-    display: none;
-  }
-  .tb-tab {
-    transform: none;
-    border: var(--stroke) solid var(--ink);
-    border-radius: 0.5rem;
-    padding: 0.4rem 0.7rem;
-  }
-  .tb-tab[data-active="true"] {
-    box-shadow: 2px 2px 0 var(--ink);
-  }
-  .tb-tab:hover {
-    transform: none;
-  }
-  .edge-rail {
-    position: static;
-    margin: 0 auto 1.5rem;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: 40rem;
-  }
-  .edge-tab,
-  .edge-music {
-    writing-mode: horizontal-tb;
-    border: var(--stroke) solid var(--ink);
-    border-radius: 0.5rem;
-    padding: 0.4rem 0.7rem;
-  }
-  .edge-tab:hover,
-  .edge-music:hover {
-    transform: none;
-  }
-  .book-controls {
-    display: none;
-  }
-  .project-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ============================================================
-   Phone — the notebook as a horizontal deck: one spiral-bound
-   sheet per screen, snap-paged sideways, with a floating dock.
-   ============================================================ */
-
-.mnav,
-.mprogress {
-  display: none;
-}
-
-@media (max-width: 900px) {
-  /* the deck owns the viewport — but only on the notebook route;
-     /writing and the post pages must still scroll normally */
-  html:has(#notebook),
-  body:has(#notebook) {
-    height: 100%;
-    overflow: hidden;
-    overscroll-behavior: none;
-  }
-
-  .book-scene {
-    padding: 0;
-    height: 100vh; /* fallback for browsers without svh */
-    height: 100svh;
-    overflow: clip;
-  }
-  .book-frame {
-    height: 100%;
-  }
-
-  /* ---- the deck ---- */
-  .book,
-  .book[data-open] {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    width: 100%;
-    max-width: none;
-    height: 100vh;
-    height: 100svh;
-    margin: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    scroll-behavior: smooth;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .book::-webkit-scrollbar {
-    display: none;
-  }
-  /* the two faces of a leaf become sibling pages in the deck */
-  .leaf,
-  .leaf[data-flipped="true"] {
-    display: contents;
-  }
-
-  /* ---- one page ---- */
-  .leaf-face {
-    position: relative;
-    flex: 0 0 100%;
-    width: 100%;
-    height: 100vh;
-    height: 100svh;
-    min-height: 0;
-    margin: 0 !important;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    scroll-snap-align: center;
-    scroll-snap-stop: always;
-    overflow-y: auto;
-    /* clip, not hidden: hidden would make this a horizontal scroll port and
-       swallow the sideways swipe before it reaches the deck */
-    overflow-x: clip;
-    overscroll-behavior-y: contain;
-    display: flex;
-    flex-direction: column;
-    padding-left: 2.4rem;
-  }
-  .leaf-face::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* punched spiral binding down the left edge */
-  .leaf-face::before {
-    display: block !important;
-    content: "";
-    position: absolute;
-    left: 0.5rem;
-    top: 0;
-    bottom: 0;
-    width: 0.95rem;
-    background-image: radial-gradient(
-      circle at 50% 0.55rem,
-      transparent 0.24rem,
-      currentColor 0.26rem,
-      currentColor 0.37rem,
-      transparent 0.39rem
-    );
-    background-size: 100% 1.7rem;
-    background-repeat: repeat-y;
-    color: color-mix(in srgb, var(--ink) 40%, transparent);
-    pointer-events: none;
-  }
-  .leaf-face.is-cover::before {
-    color: rgba(251, 249, 242, 0.4);
-  }
-  .leaf-face::after {
-    display: none;
-  }
-
-  .page,
-  .flyleaf {
-    flex: 1;
-    /* last line clears the dock */
-    padding: 1.25rem 1.2rem 6rem !important;
-  }
-
-  /* the table-of-contents flyleaf is redundant next to the dock */
-  #sec-flyleaf {
-    display: none;
-  }
-
-  /* section heading rides along at the top of its page */
-  .page-head {
-    position: sticky;
-    top: 0;
-    z-index: 6;
-    margin: 0 -1.2rem 1rem;
-    padding: 0.65rem 1.2rem;
-    background: color-mix(in srgb, var(--paper-2) 93%, transparent);
-    backdrop-filter: blur(6px);
-    border-bottom: 2px dashed color-mix(in srgb, var(--ink) 22%, transparent);
-  }
-
-  /* ---- cover: the whole landing, nothing else ---- */
-  .leaf-face.is-cover {
-    cursor: pointer;
-  }
-  .cover-inner {
-    flex: 1;
-    min-height: 0;
-    padding: 2.5rem 1.4rem 5rem;
-    border-width: 2px;
-    margin-left: 0.8rem;
-  }
-  .cover-back-inner {
-    flex: 1;
-    min-height: 0;
-    padding: 3rem 1.5rem 6rem;
-  }
-  /* nudge to swipe, only while the cover is the page you're on */
-  .leaf-face.is-cover[data-cur="true"]::after {
-    display: block;
-    content: "swipe →";
-    position: absolute;
-    inset: auto 0 1.1rem 0;
-    width: auto;
-    height: auto;
-    background: none;
-    text-align: center;
-    font-family: var(--font-hand);
-    font-size: 0.95rem;
-    color: rgba(251, 249, 242, 0.72);
-    animation: m-nudge 1.9s var(--ease) infinite;
-    pointer-events: none;
-  }
-  @keyframes m-nudge {
-    0%,
-    70%,
-    100% {
-      transform: translateX(0);
-      opacity: 0.7;
-    }
-    85% {
-      transform: translateX(6px);
-      opacity: 1;
-    }
-  }
-
-  /* ---- content lifts in each time a page lands ---- */
-  @keyframes m-rise {
-    from {
-      opacity: 0;
-      transform: translateY(16px);
-    }
-  }
-  .leaf-face[data-cur="true"] .page > *,
-  .leaf-face[data-cur="true"] .flyleaf > *,
-  .leaf-face[data-cur="true"] .cover-inner > *,
-  .leaf-face[data-cur="true"] .cover-back-inner > * {
-    animation: m-rise 0.45s var(--ease) both;
-  }
-  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(1) {
-    animation-delay: 0.03s;
-  }
-  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(2) {
-    animation-delay: 0.08s;
-  }
-  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(3) {
-    animation-delay: 0.13s;
-  }
-  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(4) {
-    animation-delay: 0.18s;
-  }
-  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(5) {
-    animation-delay: 0.23s;
-  }
-  .leaf-face[data-cur="true"] :is(.page, .cover-inner, .cover-back-inner) > :nth-child(n + 6) {
-    animation-delay: 0.28s;
-  }
-
-  /* the desktop flip chrome is replaced by the dock; pages are already
-     full-screen here, so the expand affordance has nothing to add */
-  .book-topbar,
-  .edge-rail,
-  .tab-stickies,
-  .book-controls,
-  .book-block,
-  .expand-btn {
-    display: none !important;
-  }
-
-  /* ---- deck progress ---- */
-  .mprogress {
-    display: block;
-    position: fixed;
-    inset: 0 0 auto 0;
-    height: 3px;
-    z-index: 130;
-    background: color-mix(in srgb, var(--ink) 14%, transparent);
-    pointer-events: none;
-  }
-  .mprogress span {
-    display: block;
-    height: 100%;
-    background: var(--pink);
-    border-right: 1px solid var(--ink);
-    transition: width 0.35s var(--ease);
-  }
-
-  /* ---- floating section dock ---- */
-  .mnav {
-    display: flex;
-    gap: 0.5rem;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 120;
-    padding: 0.55rem 0.8rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    background: color-mix(in srgb, var(--paper) 88%, transparent);
-    backdrop-filter: blur(10px);
-    border-top: var(--stroke) solid var(--ink);
-    /* stays out of the way while you're on the cover */
-    transform: translateY(100%);
-    opacity: 0;
-    pointer-events: none;
-    transition: transform 0.4s var(--ease), opacity 0.4s var(--ease);
-  }
-  .mnav[data-lit="true"] {
-    transform: none;
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .mnav::-webkit-scrollbar {
-    display: none;
-  }
-  .mnav-chip {
-    flex: 0 0 auto;
-    font-family: var(--font-hand);
-    font-size: 1.02rem;
-    line-height: 1;
-    /* 44px minimum touch target */
-    min-height: 2.75rem;
-    padding: 0.5rem 1rem;
-    border: 2px solid var(--ink);
-    border-radius: 999px;
-    background: var(--paper-2);
-    color: var(--ink);
-    text-decoration: none;
-    box-shadow: 2px 2px 0 var(--ink);
-    cursor: pointer;
-    transition: background 0.2s var(--ease), transform 0.12s var(--ease),
-      box-shadow 0.12s var(--ease);
-  }
-  .mnav-chip[data-on="true"] {
-    background: var(--yellow);
-    font-weight: 700;
-    box-shadow: 3px 3px 0 var(--ink);
-  }
-  .mnav-chip:active {
-    transform: translate(1px, 1px);
-    box-shadow: 1px 1px 0 var(--ink);
-  }
-  .mnav-note {
-    background: var(--pink-soft);
-  }
-
-  /* phones read one column, with room to breathe */
-  .project-grid,
-  .writing-grid {
-    gap: 1.6rem;
-  }
-  .skill-group ul {
-    gap: 0.45rem;
-  }
-}
-
-/* small tablets still get the deck, but text shouldn't run the full width */
-@media (min-width: 600px) and (max-width: 900px) {
-  .page,
-  .flyleaf,
-  .cover-inner,
-  .cover-back-inner {
-    width: 100%;
-    max-width: 40rem;
-    margin-inline: auto;
-  }
-  .mnav {
-    justify-content: center;
-  }
-}
-
-/* landscape phones: short viewports, so trim the vertical rhythm */
-@media (max-width: 900px) and (max-height: 520px) {
-  .page,
-  .flyleaf {
-    padding: 0.9rem 1rem 5rem !important;
-  }
-  .cover-inner {
-    padding: 1.2rem 1.2rem 4rem;
-  }
-  .page-head {
-    margin-bottom: 0.6rem;
-    padding: 0.45rem 1rem;
-  }
-}
-
-@media (max-width: 900px) and (prefers-reduced-motion: reduce) {
-  .book {
-    scroll-behavior: auto;
-  }
-  .leaf-face {
-    opacity: 1;
-    transition: none;
-  }
-  .leaf-face[data-cur="true"] :is(.page, .flyleaf, .cover-inner, .cover-back-inner) > * {
-    animation: none;
-  }
-  .leaf-face.is-cover[data-cur="true"]::after {
-    animation: none;
-  }
-}
-
-.leaf-front .project-grid,
-.expand-col .project-grid {
-  grid-template-columns: 1fr;
-}
-
-/* ============================================================
    Writing pages (standalone routes)
    ============================================================ */
 
@@ -2483,4 +1103,904 @@ a:hover {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+
+/* ============================================================
+   The codex.
+
+   The binding is a GLB on a fixed WebGL stage; the writing is
+   real DOM laid onto the two flat leaves through a CSS3D
+   transform. Scrolling down the page is what turns a leaf, so
+   the document itself is the only scroller and each page of
+   the book has to fit its leaf without scrolling.
+   ============================================================ */
+
+.codex {
+  position: relative;
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  /* the desk shows straight through the alpha canvas; wheel events fall
+     through to the document, which is the scroller */
+  pointer-events: none;
+}
+.stage-canvas {
+  display: block;
+  animation: stage-in 0.9s var(--ease) both;
+}
+@keyframes stage-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* the scroll the whole thing is driven by — one screen per opening */
+.scroll-track {
+  position: relative;
+  z-index: -1;
+}
+.scroll-leaf {
+  height: 100vh;
+  height: 100svh;
+}
+
+/* ---- one leaf of writing ------------------------------------------------ */
+
+.leaf-html {
+  /* opacity is owned by the render loop — it starts shut, so start invisible */
+  opacity: 0;
+  /* transparent: the vellum underneath is the page */
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.52;
+  padding: 52px 46px 44px;
+  display: flex;
+  flex-direction: column;
+  /* nothing here takes the pointer except what you can actually use */
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.12s linear;
+}
+.leaf-html[data-side="verso"] {
+  padding-right: 58px;
+}
+.leaf-html[data-side="recto"] {
+  padding-left: 58px;
+}
+.leaf-html a,
+.leaf-html button,
+.leaf-html input,
+.leaf-html textarea {
+  pointer-events: auto;
+  user-select: text;
+}
+
+.leaf-html .page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-size: inherit;
+  line-height: inherit;
+}
+.folio-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* running head over a hairline rule, the way a chapter opens */
+.folio-head {
+  font-family: var(--font-hand);
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: 0.09em;
+  text-transform: lowercase;
+  font-variant: small-caps;
+  color: var(--ink);
+  margin: 0 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 35%, transparent);
+  text-align: center;
+}
+
+.folio-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1ch;
+  margin-top: 10px;
+  padding-top: 6px;
+  font-family: var(--font-hand);
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.leaf-html[data-side="verso"] .folio-foot {
+  flex-direction: row-reverse;
+}
+.folio-no {
+  letter-spacing: 0.14em;
+}
+.catchword {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+/* ---- text on the leaf ---- */
+
+.folio-prose {
+  margin: 0 0 10px;
+  max-width: none;
+  text-align: justify;
+  hyphens: auto;
+}
+/* a rubricated opening initial, cut three lines into the text block */
+.initial {
+  float: left;
+  font-family: var(--font-hand);
+  font-size: 46px;
+  line-height: 0.86;
+  padding: 2px 7px 0 0;
+  color: var(--margin);
+}
+.rubric {
+  color: var(--margin);
+}
+
+.folio-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink-2);
+  max-width: none;
+}
+
+.folio-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.folio-list li {
+  position: relative;
+  padding: 0 0 8px 18px;
+}
+.folio-list li::before {
+  content: "❧";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--margin);
+  font-size: 12px;
+}
+
+.folio-entry {
+  margin: 0 0 14px;
+}
+.folio-entry h3 {
+  font-family: var(--font-hand);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1ch;
+}
+.folio-year {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.folio-org {
+  display: block;
+  font-style: italic;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.folio-when {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--margin);
+  margin-bottom: 4px;
+}
+.folio-entry p {
+  margin: 4px 0 0;
+  max-width: none;
+}
+.folio-entry ul {
+  margin: 5px 0 0;
+  padding-left: 15px;
+  list-style: none;
+}
+.folio-entry ul li {
+  position: relative;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+.folio-entry ul li::before {
+  content: "·";
+  position: absolute;
+  left: -12px;
+  color: var(--margin);
+}
+.folio-stack {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-faint);
+}
+.folio-links {
+  margin-top: 3px;
+  font-size: 12px;
+  display: flex;
+  gap: 1.2ch;
+}
+
+.folio-group {
+  margin-bottom: 13px;
+}
+.folio-group h3 {
+  font-family: var(--font-hand);
+  font-size: 15px;
+  font-weight: 400;
+  font-variant: small-caps;
+  letter-spacing: 0.07em;
+  color: var(--margin);
+}
+.folio-group p {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  max-width: none;
+}
+
+/* a ledger ruled with leader dots, for honours and addresses */
+.folio-ledger {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.folio-ledger li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6ch;
+  padding: 7px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  font-size: 14px;
+}
+.folio-ledger .dots {
+  flex: 1;
+  border-bottom: 1px dotted color-mix(in srgb, var(--ink) 40%, transparent);
+  transform: translateY(-0.28em);
+}
+
+.folio-writing {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.folio-writing li {
+  padding: 8px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+.folio-writing a {
+  text-decoration: none;
+}
+.folio-writing h3 {
+  font-family: var(--font-hand);
+  font-size: 16px;
+  font-weight: 400;
+}
+.folio-writing p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+  max-width: none;
+}
+
+.marginalia {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 20%, transparent);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-2);
+}
+.marginalia li {
+  margin-bottom: 4px;
+}
+
+/* ---- the title leaf ---- */
+
+.title-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+.title-kicker {
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.22em;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.title-name {
+  font-family: var(--font-hand);
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+}
+.title-rule {
+  width: 58%;
+  height: 1px;
+  background: var(--ink);
+  opacity: 0.5;
+  margin: 4px 0;
+}
+.title-role {
+  font-family: var(--font-hand);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink-2);
+  max-width: none;
+}
+.title-focus {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink-2);
+  max-width: 32ch;
+}
+.title-device {
+  font-size: 22px;
+  color: var(--margin);
+  margin-top: 6px;
+}
+.title-imprint {
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.16em;
+  font-size: 11px;
+  color: var(--ink-faint);
+  max-width: none;
+}
+
+/* ---- the table of contents leaf ---- */
+
+.leaf-html .toc li {
+  padding: 6px 0;
+  border-bottom-style: dotted;
+  border-bottom-color: color-mix(in srgb, var(--ink) 20%, transparent);
+  font-family: var(--font-hand);
+  font-size: 15px;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+}
+.leaf-html .toc .dots {
+  border-bottom-width: 1px;
+}
+.leaf-html .toc .pg {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+
+/* ---- the note form, re-cut for vellum ---- */
+
+.leaf-html .leave-note {
+  width: 100%;
+  margin: 4px 0 0;
+  gap: 8px;
+}
+.leaf-html .ln-title {
+  display: none;
+}
+.leaf-html .ln-field {
+  background: color-mix(in srgb, var(--paper-2) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);
+  border-radius: 1px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink);
+}
+.leaf-html .ln-send {
+  background: transparent;
+  border: 1px solid var(--margin);
+  border-radius: 1px;
+  box-shadow: none;
+  color: var(--margin);
+  font-variant: small-caps;
+  letter-spacing: 0.1em;
+  font-size: 14px;
+}
+.leaf-html .ln-send:hover {
+  background: color-mix(in srgb, var(--margin) 12%, transparent);
+  transform: none;
+  box-shadow: none;
+}
+
+/* ============================================================
+   Chrome around the book — kept to the edges, set like an index
+   ============================================================ */
+
+.index {
+  position: fixed;
+  z-index: 20;
+  top: 50%;
+  left: clamp(0.9rem, 2.4vw, 2.2rem);
+  transform: translateY(-50%);
+  max-height: 86svh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 0.9rem 1rem;
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 40%, transparent);
+  backdrop-filter: blur(2px);
+}
+.index::-webkit-scrollbar {
+  display: none;
+}
+.index-title {
+  display: block;
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.2em;
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.35rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+}
+.index ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: none;
+}
+.index button {
+  display: flex;
+  align-items: baseline;
+  gap: 1.2ch;
+  width: 100%;
+  /* a 40px row keeps the hit area honest at this type size */
+  padding: 0.42rem 0.2rem;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-hand);
+  font-size: 0.95rem;
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  text-align: left;
+}
+.index button:hover {
+  color: var(--ink);
+}
+.index button[data-on="true"] {
+  color: var(--margin);
+}
+.index-label {
+  flex: 1;
+}
+.index-folio {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+}
+
+/* how far through the quire you are */
+.quire {
+  position: fixed;
+  z-index: 20;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.quire span {
+  display: block;
+  height: 100%;
+  background: var(--margin);
+  transform: scaleY(0);
+  transform-origin: top center;
+}
+
+.running-head {
+  position: fixed;
+  z-index: 20;
+  right: clamp(1rem, 3vw, 2.4rem);
+  bottom: clamp(0.9rem, 2.4vh, 1.6rem);
+  margin: 0;
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.14em;
+  font-size: 0.82rem;
+  /* the vignette darkens the desk here, so the folio needs the darker ink */
+  color: var(--ink-2);
+  pointer-events: none;
+}
+
+.tabs {
+  position: fixed;
+  z-index: 20;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* flat copy of the whole book, for crawlers; inert keeps it out of the way */
+.reader-copy {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- phone: the index folds down to a strip ---- */
+
+@media (max-width: 900px) {
+  .index {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+    max-height: none;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    padding: 0.4rem 0.6rem;
+  }
+  .index-title {
+    display: none;
+  }
+  .index ol {
+    display: flex;
+    gap: 0.2rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .index ol::-webkit-scrollbar {
+    display: none;
+  }
+  .index button {
+    width: auto;
+    white-space: nowrap;
+    padding: 0.55rem 0.5rem;
+  }
+  .index-folio {
+    display: none;
+  }
+  .tabs,
+  .running-head {
+    display: none;
+  }
+}
+
+/* ---- keeping a leaf's worth of writing on the leaf ---------------------- */
+
+/* A page of a real book cannot scroll, so entries are cut to a measure that
+   fits. The full text is a click away on each project's own links. */
+.folio-work p:not(.folio-stack):not(.folio-links) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.folio-work {
+  margin-bottom: 11px;
+}
+.folio-work h3 {
+  font-size: 16px;
+}
+.folio-work p {
+  font-size: 13.5px;
+  line-height: 1.44;
+}
+
+.folio-links a {
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  color: var(--margin);
+  text-decoration-color: color-mix(in srgb, var(--margin) 45%, transparent);
+}
+
+/* the toc has leader dots; it does not also need a ruled line under each row */
+.leaf-html .toc li {
+  border-bottom: 0;
+}
+
+/* ---- the index tabs, cut as leather bookmarks --------------------------- */
+
+.tabs .edge-tab,
+.tabs .edge-music {
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  writing-mode: vertical-rl;
+  border: 0;
+  border-radius: 0;
+  box-shadow: 0 2px 6px rgba(43, 33, 20, 0.28);
+  padding: 0.85rem 0.4rem;
+  text-decoration: none;
+  color: var(--paper-2);
+  transition: transform 0.16s var(--ease);
+}
+.tabs .edge-tab:hover,
+.tabs .edge-music:hover {
+  transform: translateX(-3px);
+}
+.tabs .edge-tab:nth-child(1) {
+  background: #7a5a2e;
+}
+.tabs .edge-tab:nth-child(2) {
+  background: #4a3b6b;
+}
+.tabs .edge-tab:nth-child(3) {
+  background: #3f5d86;
+}
+.tabs .edge-music {
+  background: var(--margin);
+  color: var(--paper-2);
+}
+
+/* ---- resting on an opening ---------------------------------------------- */
+
+/* Native snap, not ScrollTrigger's: GSAP's snap drives the scroll itself and
+   fights both the scrubbed tween and the index's smooth scrollTo. This one
+   only ever settles the browser's own scroll, which GSAP reads. */
+html:has(.codex) {
+  scroll-snap-type: y mandatory;
+}
+.scroll-leaf {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+/* a wide screen reads a whole opening at once, so it skips the half stops */
+@media (min-width: 901px) {
+  .scroll-leaf[data-half] {
+    display: none;
+  }
+}
+
+/* ---- the shut board ----------------------------------------------------- */
+
+.board-plate {
+  opacity: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 60px 48px;
+  pointer-events: none;
+  user-select: none;
+  /* gold leaf on oxblood: a warm highlight, not a flat yellow */
+  color: #e5c98b;
+  text-shadow: 0 1px 0 rgba(60, 30, 14, 0.7);
+  transition: opacity 0.12s linear;
+}
+.board-frame {
+  position: absolute;
+  inset: 34px 30px;
+  border: 1px solid rgba(229, 201, 139, 0.55);
+  outline: 3px solid rgba(229, 201, 139, 0.28);
+  outline-offset: 4px;
+}
+.board-kicker {
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.26em;
+  font-size: 12px;
+}
+.board-name {
+  /* the global heading rule would paint this ink, not gold */
+  color: inherit;
+  font-family: var(--font-hand);
+  font-weight: 400;
+  font-size: 38px;
+  line-height: 1.06;
+  letter-spacing: 0.04em;
+}
+.board-rule {
+  width: 46%;
+  height: 1px;
+  background: rgba(229, 201, 139, 0.6);
+}
+.board-imprint {
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.2em;
+  font-size: 11px;
+  opacity: 0.85;
+}
+.board-open {
+  position: absolute;
+  bottom: 66px;
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.18em;
+  font-size: 12px;
+  opacity: 0.8;
+  animation: board-beckon 2.6s var(--ease) infinite;
+}
+@keyframes board-beckon {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-open {
+    animation: none;
+  }
+}
+
+/* ---- reading an opening as a plain sheet -------------------------------- */
+
+.expand-btn {
+  position: fixed;
+  z-index: 25;
+  right: clamp(1rem, 3vw, 2.4rem);
+  top: clamp(0.9rem, 2.4vh, 1.6rem);
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.12em;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 40%, transparent);
+  border-radius: 0;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  box-shadow: none;
+}
+.expand-btn:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+  transform: none;
+}
+
+.expand-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(1rem, 4vh, 3rem) 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgba(43, 33, 20, 0.55);
+  backdrop-filter: blur(3px);
+  animation: overlay-in 0.22s var(--ease) both;
+}
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+.expand-sheet {
+  width: min(62rem, 100%);
+  background: var(--paper-2);
+  border: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);
+  box-shadow: var(--shadow-hard-lg);
+  padding: clamp(1.4rem, 3vw, 2.6rem);
+}
+.expand-back {
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.12em;
+  font-size: 0.9rem;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--margin);
+  color: var(--margin);
+  padding: 0 0 2px;
+  margin-bottom: 1.4rem;
+  cursor: pointer;
+}
+.expand-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: clamp(1.4rem, 3vw, 2.8rem);
+}
+/* inside the sheet the leaves are plain columns: no page furniture, no clamp */
+.expand-cols .page {
+  height: auto;
+  overflow: visible;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.expand-cols .folio-body {
+  overflow: visible;
+}
+.expand-cols .folio-foot,
+.expand-cols .title-device {
+  display: none;
+}
+.expand-cols .folio-work p:not(.folio-stack):not(.folio-links) {
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  display: block;
+}
+
+/* ---- phone: one leaf at a time, set larger ------------------------------ */
+
+@media (max-width: 900px) {
+  .leaf-html {
+    font-size: 17.5px;
+    line-height: 1.46;
+    padding: 42px 34px 34px;
+  }
+  .leaf-html[data-side="verso"],
+  .leaf-html[data-side="recto"] {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+  .folio-head {
+    font-size: 21px;
+  }
+  .folio-entry ul li,
+  .folio-ledger li,
+  .folio-work p {
+    font-size: 16px;
+  }
+  .folio-group p {
+    font-size: 15.5px;
+  }
+  .expand-btn {
+    top: auto;
+    bottom: 3.9rem;
+    right: 0.7rem;
+  }
+}
+
+/* ---- the desk the book lies on ------------------------------------------ */
+
+/* Generated, not photographed: two layers of fractal turbulence give the grain
+   and the blotching of a tanned hide, and a vignette burns the edges down.
+   Fixed, behind everything, and nothing to download. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0.68;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='560'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.26 0 0 0 0 0.13 0 0 0 0.42 0'/%3E%3C/filter%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.008' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.30 0 0 0 0 0.21 0 0 0 0 0.10 0 0 0 0.5 -0.12'/%3E%3C/filter%3E%3Crect width='560' height='560' filter='url(%23b)'/%3E%3Crect width='560' height='560' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size:
+    1120px 1120px,
+    560px 560px;
+  background-position: center;
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(118% 96% at 50% 42%, transparent 42%, rgba(58, 37, 15, 0.5) 100%),
+    linear-gradient(180deg, rgba(255, 246, 224, 0.22), transparent 38%);
 }

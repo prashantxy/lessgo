@@ -1,4 +1,4 @@
-import Book from "@/components/Book";
+import Book3D from "@/components/Book3D";
 import { getPosts } from "@/lib/blog";
 import { profile } from "@/content/site";
 
@@ -24,7 +24,7 @@ export default function Home() {
         Skip to content
       </a>
       <main id="notebook">
-        <Book posts={posts} />
+        <Book3D posts={posts} />
       </main>
       <script
         type="application/ld+json"

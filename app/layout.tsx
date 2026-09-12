@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
-import { Architects_Daughter, Inter } from "next/font/google";
+import { EB_Garamond, IM_Fell_English } from "next/font/google";
 import "./globals.css";
 
-const hand = Architects_Daughter({
+/* The book is a 17th-century binding, so the page is set like one: Fell's
+   English for display, Garamond for reading. The CSS variables keep their old
+   names so every existing rule inherits the new voice. */
+const hand = IM_Fell_English({
   variable: "--font-hand",
   subsets: ["latin"],
   weight: "400",
+  style: ["normal", "italic"],
   display: "swap",
 });
 
-const sans = Inter({
+const sans = EB_Garamond({
   variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
