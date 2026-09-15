@@ -2004,3 +2004,236 @@ body::after {
     radial-gradient(118% 96% at 50% 42%, transparent 42%, rgba(58, 37, 15, 0.5) 100%),
     linear-gradient(180deg, rgba(255, 246, 224, 0.22), transparent 38%);
 }
+
+/* ============================================================
+   The dive.
+
+   Past the last opening the reading surface leaves the book and
+   comes at you. `.dive-track` is one more screen of scroll and
+   holds no content — it exists only as something for the
+   timeline in Book3D to be scrubbed against. `.plate` is fixed
+   and driven entirely by GSAP: everything here is its resting
+   state, at the end of the dive.
+   ============================================================ */
+
+.dive-track {
+  position: relative;
+  z-index: -1;
+}
+
+.plate {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: clamp(0.8rem, 2.6vh, 1.9rem) clamp(0.8rem, 3vw, 2.2rem);
+  /* GSAP owns opacity and visibility from the first frame; start hidden so
+     there is no flash of a full-frame sheet before the timeline binds */
+  opacity: 0;
+  visibility: hidden;
+  /* The wheel has to keep reaching the document — it is the only scroller on
+     the page, and a full-frame overlay that ate it would trap the reader here
+     with no way back into the book. Only the links take the pointer. */
+  pointer-events: none;
+  /* the rake the plate dives in from is a real rotation, so it needs depth */
+  perspective: 1400px;
+}
+
+.plate-sheet {
+  position: relative;
+  width: min(80rem, 100%);
+  min-height: min(38rem, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(0.9rem, 2.4vh, 1.7rem);
+  padding: clamp(1.6rem, 4.5vh, 3.2rem) clamp(1.5rem, 4.4vw, 3.6rem);
+  color: var(--ink);
+  /* The baked sheet, with the paper colour under it as a fallback. The wash
+     over it is only just enough to hold body copy off the darkest blotching —
+     any heavier and the grain flattens out and the plate stops reading as
+     paper at all, which is the whole reason it is an image and not a fill. */
+  background-color: var(--paper-2);
+  background-image:
+    linear-gradient(rgba(243, 233, 208, 0.14), rgba(243, 233, 208, 0.14)),
+    url("/parchment.jpg");
+  background-size: cover;
+  background-position: center;
+  box-shadow:
+    0 1px 0 rgba(255, 249, 232, 0.55) inset,
+    0 0 90px rgba(90, 64, 30, 0.13) inset,
+    var(--shadow-hard-lg);
+}
+/* the blind-ruled frame a scribe pricks out before writing a word */
+.plate-frame {
+  position: absolute;
+  inset: clamp(0.5rem, 1.4vh, 0.9rem);
+  border: 1px solid color-mix(in srgb, var(--ink) 34%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  outline-offset: 5px;
+  pointer-events: none;
+}
+
+.plate-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.3rem;
+}
+.plate-device {
+  color: var(--margin);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.plate-kicker {
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.26em;
+  font-size: clamp(0.62rem, 1.1vw, 0.76rem);
+  color: var(--ink-faint);
+}
+.plate-name {
+  font-family: var(--font-hand);
+  font-weight: 400;
+  font-size: clamp(1.9rem, 5.4vw, 3.3rem);
+  line-height: 1.02;
+  letter-spacing: 0.01em;
+}
+.plate-rule {
+  width: 34%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--rule) 22%, var(--rule) 78%, transparent);
+}
+.plate-role {
+  font-style: italic;
+  font-size: clamp(0.92rem, 1.7vw, 1.1rem);
+  color: var(--ink-2);
+}
+.plate-focus {
+  font-size: clamp(0.78rem, 1.3vw, 0.9rem);
+  color: var(--ink-faint);
+  max-width: 34rem;
+}
+
+.plate-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: clamp(1.2rem, 3.4vw, 3rem);
+  align-items: start;
+  min-height: 0;
+}
+.plate-col {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.7rem, 1.8vh, 1.2rem);
+  min-width: 0;
+}
+/* a hairline gutter, the way an opening is ruled either side of the fold */
+.plate-col-aside {
+  padding-left: clamp(1rem, 2.6vw, 2.2rem);
+  border-left: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.plate-prose {
+  font-size: clamp(0.85rem, 1.4vw, 1rem);
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.plate-sub {
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.2em;
+  font-size: clamp(0.7rem, 1.1vw, 0.82rem);
+  color: var(--margin);
+  margin-bottom: 0.4rem;
+}
+.plate-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.34rem;
+  font-size: clamp(0.78rem, 1.25vw, 0.9rem);
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.plate-list li {
+  position: relative;
+  padding-left: 0.95rem;
+  text-wrap: pretty;
+}
+.plate-list li::before {
+  content: "·";
+  position: absolute;
+  left: 0.15rem;
+  color: var(--margin);
+}
+
+.plate-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem 1.4rem;
+  padding-top: clamp(0.5rem, 1.4vh, 0.9rem);
+  border-top: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.plate-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.2rem;
+  font-size: clamp(0.76rem, 1.2vw, 0.88rem);
+}
+.plate-links a {
+  /* the links are the one thing on the plate you can actually hit */
+  pointer-events: auto;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--margin);
+  padding-bottom: 1px;
+}
+.plate-links a:hover {
+  color: var(--margin);
+}
+.plate-imprint {
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.18em;
+  font-size: clamp(0.66rem, 1vw, 0.76rem);
+  color: var(--ink-faint);
+}
+
+/* A phone reads one column, and the prose is what has to give: the plate can
+   never scroll — the wheel belongs to the document — so anything that will not
+   fit the frame has to come off it. The whole of it is still on the leaves. */
+@media (max-width: 900px) {
+  .plate-cols {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.1rem;
+  }
+  .plate-col-aside {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .plate-prose:nth-of-type(n + 2) {
+    display: none;
+  }
+}
+@media (max-height: 620px) {
+  .plate-prose:nth-of-type(n + 2),
+  .plate-focus {
+    display: none;
+  }
+}
+
+/* the expand sheet is the same page on the same stock — keep them one thing */
+.expand-sheet {
+  background-color: var(--paper-2);
+  background-image:
+    linear-gradient(rgba(243, 233, 208, 0.2), rgba(243, 233, 208, 0.2)),
+    url("/parchment.jpg");
+  background-size: cover;
+  background-position: center;
+}

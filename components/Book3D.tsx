@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { profile } from "@/content/site";
+import { about, highlights, now, profile } from "@/content/site";
 import type { PostMeta } from "@/lib/format";
 import Music from "./Music";
 import { SPREADS, STOPS, TURNS, bookScroll, setSpread, wake } from "./book/state";
@@ -19,6 +19,9 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
   const folioRef = useRef<HTMLSpanElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const spreadRef = useRef(-1);
+  /* the dive: the plate, and the screen of scroll that drives it */
+  const plateRef = useRef<HTMLDivElement>(null);
+  const diveRef = useRef<HTMLDivElement>(null);
   /* the one piece of React state here: opening the reading sheet is a real UI
      change, and <BookScene /> is memoised so the canvas sits it out */
   const [expanded, setExpanded] = useState(false);
@@ -64,7 +67,12 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
       const stops = STOPS[bookScroll.layout] - 1;
       /* the first stop is spent opening the covers; the book proper starts at 1 */
       const q0 = raw * stops;
-      bookScroll.close = 1 - Math.max(0, Math.min(1, q0));
+      /* Eased, not linear: a cover resists at first, swings through, and eases
+         onto the desk. The scene springs this as well, but the spring only
+         adds weight around wherever the scroll puts the board — the shape of
+         the fold against the scroll itself has to come from here. */
+      const lift = Math.max(0, Math.min(1, q0));
+      bookScroll.close = 1 - lift * lift * (3 - 2 * lift);
       const q = Math.max(0, q0 - 1);
 
       let i: number;
@@ -133,6 +141,78 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
     };
   }, []);
 
+  /* ---- the dive ----
+          Past the last opening the reading surface comes off the book and
+          comes at you: the plate starts raked back at the angle the camera
+          holds the leaves at, small and out of focus, and one screen of scroll
+          brings it flat, sharp and full-frame. A scrubbed GSAP timeline rather
+          than a CSS transition, because it has to be a position in the scroll
+          and not an event — scroll back up and it goes back into the book.
+
+          Deliberately its own ScrollTrigger: the book's one runs the length of
+          `.scroll-track` and this begins exactly where that ends. ---- */
+  useEffect(() => {
+    const plate = plateRef.current;
+    const dive = diveRef.current;
+    if (!plate || !dive) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const lines = plate.querySelectorAll<HTMLElement>("[data-line]");
+    /* the binding, and the book's own furniture, both give way to the plate */
+    const behind = document.querySelectorAll<HTMLElement>(
+      ".stage, .index, .quire, .running-head, .expand-btn",
+    );
+
+    const tl = gsap.timeline({
+      defaults: { ease: "none" },
+      scrollTrigger: {
+        trigger: dive,
+        start: "top bottom",
+        end: "top top",
+        scrub: reduce.matches ? true : 0.5,
+      },
+    });
+
+    if (reduce.matches) {
+      tl.fromTo(plate, { autoAlpha: 0 }, { autoAlpha: 1 }, 0).fromTo(
+        behind,
+        { opacity: 1 },
+        { opacity: 0.12 },
+        0,
+      );
+    } else {
+      tl.fromTo(
+        plate,
+        { autoAlpha: 0, scale: 0.36, yPercent: 13, rotateX: 44, filter: "blur(9px)" },
+        {
+          autoAlpha: 1,
+          scale: 1,
+          yPercent: 0,
+          rotateX: 0,
+          filter: "blur(0px)",
+          ease: "power2.out",
+          duration: 1,
+        },
+        0,
+      )
+        .fromTo(behind, { opacity: 1 }, { opacity: 0.1, duration: 0.72 }, 0)
+        /* the writing settles onto the sheet after the sheet has arrived */
+        .fromTo(
+          lines,
+          { opacity: 0, y: 28 },
+          { opacity: 1, y: 0, duration: 0.42, stagger: 0.045, ease: "power2.out" },
+          0.42,
+        );
+    }
+
+    return () => {
+      tl.scrollTrigger?.kill();
+      tl.kill();
+      gsap.set([plate, ...behind, ...lines], { clearProps: "all" });
+    };
+  }, []);
+
   /* ---- keyboard: one opening at a time ---- */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -172,6 +252,85 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
           <div className="scroll-leaf" key={i} data-half={i > 0 && i % 2 === 0 ? true : undefined} />
         ))}
       </div>
+
+      {/* one more screen of scroll, which is what the dive is scrubbed against */}
+      <div className="dive-track" ref={diveRef} aria-hidden="true">
+        <div className="scroll-leaf" />
+      </div>
+
+      {/* The reading plate. Set on a baked sheet of parchment rather than the
+          flat paper colour — at full frame a solid fill reads as a modal, and
+          the whole point is that this is the page you were just looking at.
+          `pointer-events` stays off the plate itself so the wheel keeps
+          reaching the document, which is the only scroller here. */}
+      <section className="plate" ref={plateRef} aria-label={`${profile.name} — in full`}>
+        <div className="plate-sheet">
+          <span className="plate-frame" aria-hidden="true" />
+
+          <header className="plate-head">
+            <span className="plate-device" aria-hidden="true" data-line>
+              ❦
+            </span>
+            <span className="plate-kicker" data-line>
+              the field notebook of
+            </span>
+            <h2 className="plate-name" data-line>
+              {profile.name}
+            </h2>
+            <span className="plate-rule" aria-hidden="true" data-line />
+            <p className="plate-role" data-line>
+              {profile.role}
+            </p>
+            <p className="plate-focus" data-line>
+              being an account of {profile.focus.join(", ")}
+            </p>
+          </header>
+
+          <div className="plate-cols">
+            <div className="plate-col" data-line>
+              {about.map((para) => (
+                <p key={para.slice(0, 24)} className="plate-prose">
+                  {para}
+                </p>
+              ))}
+            </div>
+
+            <div className="plate-col plate-col-aside">
+              <div data-line>
+                <h3 className="plate-sub">Presently</h3>
+                <ul className="plate-list">
+                  {now.map((n) => (
+                    <li key={n}>{n}</li>
+                  ))}
+                </ul>
+              </div>
+              <div data-line>
+                <h3 className="plate-sub">Of Honours</h3>
+                <ul className="plate-list">
+                  {highlights.map((h) => (
+                    <li key={h}>{h}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <footer className="plate-foot" data-line>
+            <p className="plate-links">
+              <a href={`mailto:${profile.email}`}>{profile.email}</a>
+              <a href={profile.links.github} target="_blank" rel="noopener noreferrer">
+                github
+              </a>
+              <a href={profile.resume} target="_blank" rel="noopener">
+                résumé
+              </a>
+            </p>
+            <p className="plate-imprint">
+              {profile.location} · Anno MMXXVI · vol. i
+            </p>
+          </footer>
+        </div>
+      </section>
 
       <nav className="index" aria-label="Contents" ref={navRef}>
         <span className="index-title">Contents</span>

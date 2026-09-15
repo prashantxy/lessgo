@@ -153,6 +153,30 @@ type Geometry = {
   boardW: number;
   boardT: number;
   stackT: number;
+  /** measured y of the top of the text block — what the front board shuts onto */
+  blockTop: number;
+};
+
+/**
+ * The half of the text block that rides the front board over as the book
+ * shuts: `flap` twins the board's hinge, `wad` holds the stack where it was
+ * authored and owns the thickness that has to press flat on landing.
+ */
+type Fold = {
+  flap: THREE.Group;
+  wad: THREE.Group;
+  /** y of the face the stack rests on the board by — the collapse anchor */
+  floor: number;
+};
+
+/** everything the frame loop needs off the GLB, measured once per scene */
+type BookPrep = {
+  span: number;
+  geom: Geometry;
+  hinge: THREE.Object3D | null;
+  shutAway: THREE.Object3D[];
+  block: THREE.Object3D | null;
+  fold: Fold | null;
 };
 
 /**
@@ -241,10 +265,22 @@ function Book({ posts }: { posts: PostMeta[] }) {
   const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
 
-  /* one-time scene prep: centre on the origin, sit it on the ground plane,
-     stop skinned pages being culled by their rest-pose bounds, and work out
-     where on the block the two flat pages actually lie */
-  const { span, geom, hinge, shutAway, block } = useMemo(() => {
+  /* One-time scene prep: centre on the origin, sit it on the ground plane,
+     stop skinned pages being culled by their rest-pose bounds, work out where
+     on the block the two flat pages lie, and build the fold flap.
+
+     Cached on the scene, not on the render. `useGLTF` hands out one shared
+     scene for the whole app, and this function *mutates* it — so it is not a
+     pure memo and must not run twice over the same graph. Strict Mode invokes
+     it twice on mount, which was enough to break it two ways: the second pass
+     re-read an already-centred bounding box and zeroed the offset it had just
+     applied, and it built a second flap that stole `PageStack_L` out of the
+     first — leaving the frame loop driving an empty group while the half-stack
+     sat where it was authored, out in the open beside the shut book. */
+  const prep = useMemo(() => {
+    const cached = scene.userData.__bookPrep as BookPrep | undefined;
+    if (cached) return cached;
+
     const box = new THREE.Box3().setFromObject(scene);
     const centre = box.getCenter(new THREE.Vector3());
     const extent = box.getSize(new THREE.Vector3());
@@ -272,12 +308,13 @@ function Book({ posts }: { posts: PostMeta[] }) {
 
     /* the exporter wrote the binding's real dimensions into the scene extras */
     const dims = (scene.userData?.BOOK_DIMS ?? {}) as Record<string, number>;
+    /* the hinge's rest offset from the spine — also the board's own inset */
+    const boardIn = dims.BOARD_IN ?? 0.026;
     const hinge = scene.getObjectByName("Hinge_Cover_L") ?? null;
-    /* The left half of the text block, the flat spine strip and its stitching
-       all sit to the left of the fold; with the cover shut over the right half
-       they would lie out in the open beside it. GLTFLoader splits a
-       multi-primitive mesh into a group, so these are groups, not meshes. */
-    const shutAway = ["PageStack_L", "Spine", "Sewing_Thread"]
+    /* The flat spine strip and its stitching sit across the fold; with the
+       cover shut they would lie out in the open beside the boards. GLTFLoader
+       splits a multi-primitive mesh into a group, so these are groups. */
+    const shutAway = ["Spine", "Sewing_Thread"]
       .map((n) => scene.getObjectByName(n))
       .filter((o): o is THREE.Object3D => Boolean(o));
     /* everything the boards close over hangs off this one pivot */
@@ -287,23 +324,81 @@ function Book({ posts }: { posts: PostMeta[] }) {
       ? new THREE.Box3().setFromObject(stack).max.y - box.min.y + 0.0012
       : extent.y * 0.55;
 
-    return {
+    /* ---- what the front board actually has to shut onto ----
+       Not `STACK_T`. The ten skinned leaves are bound *above* the half-stacks
+       — the stacks top out at 24.0 mm and the leaves at 30.2 mm — so a board
+       folded to (2·BOARD_T + STACK_T)/2 · 2 = 40.5 mm lands a centimetre clear
+       of the paper, which is where the floating clasps came from. Read it off
+       the bind-pose geometry instead. A skinned mesh's world matrix is not
+       where it renders, so this has to be the *geometry* box, which is
+       authored in the rig's own space. */
+    let blockTop = 0;
+    for (const o of block?.children ?? []) {
+      o.traverse((n) => {
+        const mesh = n as THREE.Mesh;
+        if (!mesh.isMesh || /Spine|Thread/i.test(mesh.name)) return;
+        mesh.geometry.computeBoundingBox();
+        blockTop = Math.max(blockTop, mesh.geometry.boundingBox?.max.y ?? 0);
+      });
+    }
+    if (!blockTop) blockTop = (dims.STACK_T ?? 0.0235) + 0.0067;
+    blockTop += 0.0006;
+
+    /* ---- the fold flap ----
+       The left half of the text block is not a thing that shrinks: it is the
+       leaves already read, lying on the open front board, and shutting the
+       book carries them over with it. Squashing its width instead is what made
+       the bundle tear open out of the spine. So lift it out of `Spine_Pivot`
+       and hang it on the board's own hinge.
+
+       `flap` copies the hinge node's transform exactly, so `wad` — offset by
+       the hinge's rest x to put the stack back where it was authored — rides
+       the board rigidly. `wad` also owns the thickness, which has to collapse
+       at the very end of the fold: face-down the half-stack lands inside the
+       volume the right half already fills, and the only place left for it is
+       nowhere. It is under the shut board by then, so nobody sees it go. */
+    const stackL = scene.getObjectByName("PageStack_L") ?? null;
+    let fold: Fold | null = null;
+    if (stackL && hinge?.parent) {
+      const flap = new THREE.Group();
+      const wad = new THREE.Group();
+      flap.position.x = -boardIn;
+      wad.position.x = boardIn;
+      const wadBox = new THREE.Box3();
+      stackL.traverse((n) => {
+        const mesh = n as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.geometry.computeBoundingBox();
+        if (mesh.geometry.boundingBox) wadBox.union(mesh.geometry.boundingBox);
+      });
+      flap.add(wad);
+      wad.add(stackL);
+      hinge.parent.add(flap);
+      fold = { flap, wad, floor: wadBox.isEmpty() ? 0 : wadBox.min.y };
+    }
+
+    const prepped: BookPrep = {
       span: extent.x,
       hinge,
       shutAway,
       block,
+      fold,
       geom: {
         pageW: dims.PAGE_W ?? 0.196,
         pageH: dims.PAGE_H ?? 0.284,
         gutter: dims.GUTTER ?? 0.005,
         top,
-        boardIn: dims.BOARD_IN ?? 0.026,
+        boardIn,
         boardW: dims.BOARD_W ?? 0.206,
         boardT: dims.BOARD_T ?? 0.0085,
         stackT: dims.STACK_T ?? 0.0235,
+        blockTop,
       },
     };
+    scene.userData.__bookPrep = prepped;
+    return prepped;
   }, [scene]);
+  const { span, geom, hinge, shutAway, block, fold } = prep;
 
   /* where the block's middle sits open, and where it has to sit shut */
   const openCentre = geom.pageW / 2 + geom.gutter / 2;
@@ -323,6 +418,7 @@ function Book({ posts }: { posts: PostMeta[] }) {
       focusTo: new THREE.Vector3(),
       cursor: 0,
       close: 1,
+      closeV: 0,
       settle: 2,
       dest: new THREE.Vector3(NaN, NaN, NaN),
       destT: NaN,
@@ -353,27 +449,85 @@ function Book({ posts }: { posts: PostMeta[] }) {
 
     /* ---- the covers ----
        The GLB animates leaves but not boards, so the front board is folded by
-       hand about the spine centre. Rotating it about its own hinge would land
-       it half a board off, so the pivot is shifted to x = 0 exactly:
-       rotating about c instead of p is the same rotation plus (v - R·v),
-       v = c - p. The extra lift sets it down on top of the block. */
-    const close = bookScroll.reduced ? (bookScroll.progress < 0.02 ? 1 : 0) : bookScroll.close;
-    s.close = damp(s.close, close, 11, dt);
-    if (hinge) {
-      const theta = -Math.PI * s.close;
-      const cos = Math.cos(theta);
-      const v = geom.boardIn;
-      const lift = (geom.stackT + 2 * geom.boardT) * ((1 - cos) / 2);
-      hinge.rotation.z = theta;
-      hinge.position.set(-v + v * (1 - cos), -v * Math.sin(theta) + lift, 0);
+       hand, and the whole difficulty is that a board is not hinged on a point
+       the model gives you. Its spine edge rests at (-BOARD_IN, 0) lying open
+       and has to end at (+BOARD_IN, blockTop) face down; those are 66 mm
+       apart, so *any* single fixed pivot that carries one to the other swings
+       on a 33 mm radius and throws the edge 46 mm into the air at ninety
+       degrees — a fifth of the board's own width clear of the spine, which is
+       exactly where the eye is following it, and reads as the cover coming off
+       the book. Both ends look right either way; only the movement gives it
+       away.
+
+       A real board does not travel: it turns about a leather joint that stays
+       beside the spine and only creeps up onto the block as it lands. So drive
+       the pivot along that path directly — quartic in x, so the edge hugs the
+       *left* of the spine through the whole lift and only crosses over at the
+       very end, and quadratic in y, so it stays down on the desk until there
+       is a block under it to climb. At half shut that puts the edge at
+       (-23 mm, 7.5 mm): standing upright, planted on its own joint. */
+    const closeTo = bookScroll.reduced ? (bookScroll.progress < 0.02 ? 1 : 0) : bookScroll.close;
+    if (bookScroll.reduced) {
+      s.close = closeTo;
+      s.closeV = 0;
+    } else {
+      /* A board has mass. An exponential approach has none — it is fastest the
+         instant it is asked to move and only ever decelerates, which is what
+         made the cover feel like a sprite being cross-faded rather than a
+         quarter-kilo of leather over board. This is a slightly under-damped
+         spring instead: it takes a moment to break away, swings through, and
+         settles with one small nod. Sub-stepped so a long frame cannot make it
+         explode. */
+      const stiff = 170;
+      const damping = 2 * Math.sqrt(stiff) * 0.6;
+      let rest = Math.min(dt, 0.1);
+      while (rest > 0) {
+        const h = Math.min(rest, 1 / 240);
+        s.closeV += (-stiff * (s.close - closeTo) - damping * s.closeV) * h;
+        s.close += s.closeV * h;
+        rest -= h;
+      }
+      /* the desk and the shut board are hard stops; a board dropped flat does
+         not keep going, it knocks and stops */
+      if (s.close < 0) {
+        s.close = 0;
+        s.closeV *= -0.16;
+      } else if (s.close > 1) {
+        s.close = 1;
+        s.closeV *= -0.16;
+      }
     }
-    /* gather them into the spine line as the book shuts */
-    const open = Math.max(0.001, 1 - s.close);
+    const theta = -Math.PI * s.close;
+    const pivotX = -geom.boardIn + 2 * geom.boardIn * s.close ** 4;
+    const pivotY = geom.blockTop * s.close ** 2;
+    if (hinge) {
+      hinge.rotation.z = theta;
+      hinge.position.set(pivotX, pivotY, 0);
+    }
+    /* Gather the spine strip and its stitching into the fold as the book
+       shuts — but only over the last of it, once the board is past upright and
+       lying over them. Doing it across the whole fold is what made the writing
+       surface look like it was being stretched out of the spine. */
+    const open = Math.max(0.001, 1 - clamp01((s.close - 0.58) / 0.42));
     for (const o of shutAway) o.scale.x = open;
     /* Open, the text block straddles the spine; shut, it has to sit square
        inside the boards. The boards land at 2·BOARD_IN, the block starts at the
        gutter, and the difference is what it slides. */
-    if (block) block.position.x = (shutCentre - openCentre) * s.close;
+    const slide = (shutCentre - openCentre) * s.close;
+    if (block) block.position.x = slide;
+    /* The leaves already read ride the board over. `flap` is the hinge node's
+       twin, plus the same slide the rest of the block gets, so the half-stack
+       stays welded to the leather through the whole fold. Its thickness is the
+       one thing that cannot survive the landing — face down it wants the
+       volume the right half already occupies — so it presses flat over the
+       last fifteen degrees, under the board, out of sight. */
+    if (fold) {
+      fold.flap.rotation.z = theta;
+      fold.flap.position.set(pivotX + slide, pivotY, 0);
+      const press = lerp(1, 0.02, smooth(clamp01((s.close - 0.86) / 0.14)));
+      fold.wad.scale.y = press;
+      fold.wad.position.y = fold.floor * (1 - press);
+    }
 
     /* ---- pages ---- */
     const target = bookScroll.reduced ? bookScroll.spread : bookScroll.cursor;
@@ -422,13 +576,21 @@ function Book({ posts }: { posts: PostMeta[] }) {
     /* A leaf caught mid-turn stands on its edge, and so does the cover
        mid-fold — both reach far above the flat footprint, and framing only the
        footprint crops them off the top of the frame. This is what makes the
-       book breathe: it eases back for a turn and settles in again after. */
-    const upright = Math.max(bookScroll.lift, Math.sin(Math.PI * s.close));
+       book breathe: it eases back for a turn and settles in again after.
+
+       The two cases need their own allowance rather than one shared `upright`.
+       A turning leaf reaches a page height; the cover reaches its own width
+       plus however far up the joint has climbed, and carries the half-stack of
+       leaves with it — measurably more, and it was clipping the board's top
+       edge and its corner bosses right at the middle of the fold. They never
+       overlap: the leaves only start turning once the boards are down. */
+    const foldUp = Math.sin(Math.PI * s.close);
     const fitTall =
       geom.pageH * Math.sin(el) +
       geom.stackT * Math.cos(el) +
-      geom.pageH * 1.05 * Math.cos(el) * upright;
-    fitSpan += geom.boardW * 0.22 * Math.sin(Math.PI * s.close);
+      geom.pageH * 1.05 * Math.cos(el) * bookScroll.lift +
+      (geom.boardW + geom.blockTop) * 1.3 * Math.cos(el) * foldUp;
+    fitSpan += geom.boardW * 0.22 * foldUp;
     const near = (geom.pageH / 2) * Math.cos(el);
     let dist = Math.max(fitSpan / 2 / halfX, fitTall / 2 / halfY) / frame.fill;
     for (let i = 0; i < 3; i++) {
@@ -450,10 +612,14 @@ function Book({ posts }: { posts: PostMeta[] }) {
     s.basis.lookAt(s.camTo, s.focusTo, s.worldUp);
     const viewW = 2 * halfX * dist;
     const viewH = viewW / cam.aspect;
+    /* The standing cover is all above the desk, so the whole image has to sit
+       lower in the frame while it is up — otherwise the extra distance that
+       fits it just shrinks the book instead of revealing the board. */
+    const frameY = lerp(frame.y, -0.05, foldUp);
     s.shift
       .setFromMatrixColumn(s.basis, 0)
       .multiplyScalar(frame.x * viewW)
-      .addScaledVector(s.up.setFromMatrixColumn(s.basis, 1), -frame.y * viewH);
+      .addScaledVector(s.up.setFromMatrixColumn(s.basis, 1), -frameY * viewH);
     s.camTo.add(s.shift);
     s.focusTo.add(s.shift);
 
@@ -485,13 +651,14 @@ function Book({ posts }: { posts: PostMeta[] }) {
        moving" is never true and the trailing frames would never be asked for. */
     const moving =
       s.intro < 1 ||
-      Math.abs(s.close - close) > 1e-4 ||
+      Math.abs(s.close - closeTo) > 1e-4 ||
+      Math.abs(s.closeV) > 1e-4 ||
       Math.abs(s.cursor - target) > 1e-4 ||
       s.pos.distanceToSquared(s.camTo) > 1e-9;
     const retargeted =
-      s.destT !== target || s.destC !== close || s.dest.distanceToSquared(s.camTo) > 1e-12;
+      s.destT !== target || s.destC !== closeTo || s.dest.distanceToSquared(s.camTo) > 1e-12;
     s.destT = target;
-    s.destC = close;
+    s.destC = closeTo;
     s.dest.copy(s.camTo);
 
     if (moving || retargeted) {
@@ -548,15 +715,19 @@ function Stage({ posts }: { posts: PostMeta[] }) {
 
       <Book posts={posts} />
 
-      {/* an open book lies flat, so it covers its own contact shadow — the
-          heavy blur is what lets a soft halo bleed out past the boards */}
+      {/* An open book lies flat, so it covers its own contact shadow — the
+          heavy blur is what lets a soft halo bleed out past the boards. `far`
+          has to clear the *standing* cover, not the flat one: at 0.14 the board
+          left the shadow volume the moment it came off the desk, the halo
+          vanished, and the book read as pasted onto the page for the whole
+          length of the fold. */}
       <ContactShadows
         position={[0, -0.003, 0]}
-        scale={1.8}
+        scale={2.1}
         resolution={512}
-        far={0.14}
+        far={0.34}
         blur={4.5}
-        opacity={0.6}
+        opacity={0.62}
         color="#2b2114"
       />
 
