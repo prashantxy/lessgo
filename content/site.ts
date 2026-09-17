@@ -1,3 +1,8 @@
+/* The canonical origin. Everything that has to emit an absolute URL —
+   metadataBase, the sitemap, the feed, JSON-LD — reads it from here, so
+   moving the site is a one-line change. */
+export const SITE = "https://prashantdubey.work";
+
 export const profile = {
   name: "Prashant Dubey",
   alias: "keizer",

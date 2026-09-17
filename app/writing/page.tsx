@@ -5,6 +5,13 @@ import { getPosts, formatDate } from "@/lib/blog";
 export const metadata: Metadata = {
   title: "Writing",
   description: "Notes on graph systems, terminal tooling, and backends.",
+  alternates: { canonical: "/writing" },
+  openGraph: {
+    title: "Writing — Prashant Dubey",
+    description: "Notes on graph systems, terminal tooling, and backends.",
+    type: "website",
+    url: "/writing",
+  },
 };
 
 export default function WritingIndex() {
@@ -19,6 +26,9 @@ export default function WritingIndex() {
         <p className="page-lead" style={{ marginTop: "0.6rem" }}>
           Notes on graph systems, terminal tooling, and backends I&apos;ve had to reason about
           carefully.
+        </p>
+        <p className="page-lead" style={{ marginTop: "0.4rem", fontSize: "0.95em" }}>
+          <a href="/feed.xml">subscribe by RSS</a>
         </p>
         <div className="writing-grid" style={{ marginTop: "1.5rem" }}>
           {posts.map((p) => (

@@ -1138,6 +1138,97 @@ a:hover {
   }
 }
 
+/* ---- the air above the desk ---------------------------------------------
+   Dust caught in the lamp light, and the landing sequence the page arrives
+   with.
+
+   The motes are DOM and CSS on purpose, not a points cloud in the scene. The
+   canvas runs frameloop="demand": it renders when the scroll moves the book
+   and then goes back to sleep. Anything animating *inside* it would pin the
+   renderer to a permanent rAF — redrawing the whole binding sixty times a
+   second to drift twenty specks. Out here the compositor animates them on its
+   own thread and the WebGL loop stays asleep. */
+.motes {
+  position: fixed;
+  inset: 0;
+  /* above the canvas (0), below every piece of chrome (20+) */
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.motes i {
+  position: absolute;
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 233, 193, 0.95), rgba(255, 233, 193, 0) 68%);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: mote var(--dur) linear var(--delay) infinite;
+}
+@keyframes mote {
+  /* fade in and out at the ends so a mote never pops at the loop seam */
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  14% {
+    opacity: var(--peak);
+  }
+  82% {
+    opacity: var(--peak);
+  }
+  100% {
+    transform: translate3d(var(--dx), var(--dy), 0);
+    opacity: 0;
+  }
+}
+
+/* The furniture arrives after the book has landed, not with it — the binding
+   settles onto the desk first (BookScene drives that over ~0.85s), and only
+   then does the index, the folio and the tabs come up around it. Opacity
+   only: .index and the edge tabs already own their transforms for
+   positioning, and animating transform here would fight them. */
+@keyframes chrome-in {
+  from {
+    opacity: 0;
+  }
+}
+.index,
+.quire,
+.running-head,
+.expand-btn,
+.tabs {
+  animation: chrome-in 0.75s var(--ease) both;
+}
+.index {
+  animation-delay: 0.72s;
+}
+.quire,
+.running-head {
+  animation-delay: 0.86s;
+}
+.expand-btn {
+  animation-delay: 0.96s;
+}
+.tabs {
+  animation-delay: 1.04s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* no drifting dust, and no staged entrance — everything is simply there */
+  .motes {
+    display: none;
+  }
+  .index,
+  .quire,
+  .running-head,
+  .expand-btn,
+  .tabs {
+    animation: none;
+  }
+}
+
 /* the scroll the whole thing is driven by — one screen per opening */
 .scroll-track {
   position: relative;

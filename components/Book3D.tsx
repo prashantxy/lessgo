@@ -13,6 +13,39 @@ import { buildSpreads, roman } from "./book/spreads";
 /* WebGL never runs on the server, and the model is fetched lazily either way */
 const BookScene = dynamic(() => import("./book/BookScene"), { ssr: false });
 
+/* Dust in the lamp light.
+
+   Fixed values, not Math.random(): this component is rendered on the server
+   too, and random positions would differ between the server pass and
+   hydration — React would warn and repaint every mote. Generated once with a
+   seed and frozen here instead. Negative delays start each mote partway
+   through its drift, so the air is already alive on the first frame rather
+   than every speck setting off together. */
+const MOTES = [
+  { left: 52.0, top: 75.8, s: 4.1, dur: 21.9, delay: -6.1, dx: 29, dy: -84, peak: 0.22 },
+  { left: 6.5, top: 40.3, s: 3.5, dur: 21.3, delay: -13.0, dx: -26, dy: -65, peak: 0.48 },
+  { left: 40.9, top: 91.9, s: 1.8, dur: 30.8, delay: -3.2, dx: -49, dy: -79, peak: 0.36 },
+  { left: 91.9, top: 25.6, s: 3.0, dur: 32.0, delay: -9.4, dx: -27, dy: -142, peak: 0.48 },
+  { left: 47.6, top: 91.7, s: 2.0, dur: 30.8, delay: -4.9, dx: 59, dy: -148, peak: 0.3 },
+  { left: 8.8, top: 71.2, s: 2.5, dur: 33.3, delay: -16.3, dx: 38, dy: -63, peak: 0.26 },
+  { left: 55.2, top: 88.4, s: 3.0, dur: 23.1, delay: -19.1, dx: 40, dy: -131, peak: 0.37 },
+  { left: 55.1, top: 54.5, s: 1.9, dur: 28.2, delay: -2.2, dx: -25, dy: -117, peak: 0.47 },
+  { left: 57.2, top: 30.9, s: 1.6, dur: 29.8, delay: -17.0, dx: -5, dy: -123, peak: 0.38 },
+  { left: 71.1, top: 34.0, s: 1.8, dur: 33.8, delay: -2.3, dx: -67, dy: -94, peak: 0.4 },
+  { left: 41.1, top: 69.5, s: 4.1, dur: 27.0, delay: -15.8, dx: -43, dy: -125, peak: 0.23 },
+  { left: 14.2, top: 25.8, s: 3.8, dur: 26.1, delay: -5.1, dx: 59, dy: -69, peak: 0.2 },
+  { left: 89.2, top: 15.8, s: 3.6, dur: 31.3, delay: -8.9, dx: -13, dy: -142, peak: 0.21 },
+  { left: 62.6, top: 28.3, s: 3.0, dur: 21.5, delay: -21.8, dx: -29, dy: -78, peak: 0.34 },
+  { left: 40.1, top: 48.9, s: 3.0, dur: 25.8, delay: -14.4, dx: 65, dy: -75, peak: 0.25 },
+  { left: 33.3, top: 23.9, s: 2.5, dur: 17.5, delay: -6.6, dx: 10, dy: -108, peak: 0.47 },
+  { left: 34.2, top: 56.6, s: 4.0, dur: 26.4, delay: -10.1, dx: -18, dy: -50, peak: 0.42 },
+  { left: 31.9, top: 37.9, s: 3.1, dur: 25.8, delay: -12.4, dx: -43, dy: -92, peak: 0.41 },
+  { left: 74.4, top: 45.7, s: 2.8, dur: 25.6, delay: -12.1, dx: -4, dy: -149, peak: 0.26 },
+  { left: 94.9, top: 77.4, s: 2.8, dur: 29.8, delay: -20.5, dx: -33, dy: -98, peak: 0.4 },
+  { left: 6.5, top: 47.6, s: 4.0, dur: 27.4, delay: -0.2, dx: -56, dy: -59, peak: 0.45 },
+  { left: 6.4, top: 53.1, s: 3.6, dur: 20.8, delay: -9.1, dx: 49, dy: -71, peak: 0.32 },
+] as const;
+
 export default function Book3D({ posts }: { posts: PostMeta[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
@@ -161,7 +194,7 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
     const lines = plate.querySelectorAll<HTMLElement>("[data-line]");
     /* the binding, and the book's own furniture, both give way to the plate */
     const behind = document.querySelectorAll<HTMLElement>(
-      ".stage, .index, .quire, .running-head, .expand-btn",
+      ".stage, .motes, .index, .quire, .running-head, .expand-btn",
     );
 
     const tl = gsap.timeline({
@@ -242,6 +275,28 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
       {/* the binding — decorative chrome; the text on it is real DOM */}
       <div className="stage">
         <BookScene posts={posts} />
+      </div>
+
+      {/* the air above the desk — see .motes in globals.css for why this is
+          DOM and not a points cloud in the scene */}
+      <div className="motes" aria-hidden="true">
+        {MOTES.map((m, i) => (
+          <i
+            key={i}
+            style={
+              {
+                left: `${m.left}%`,
+                top: `${m.top}%`,
+                "--s": `${m.s}px`,
+                "--dur": `${m.dur}s`,
+                "--delay": `${m.delay}s`,
+                "--dx": `${m.dx}px`,
+                "--dy": `${m.dy}px`,
+                "--peak": m.peak,
+              } as React.CSSProperties
+            }
+          />
+        ))}
       </div>
 
       {/* the scroll this whole thing is driven by */}

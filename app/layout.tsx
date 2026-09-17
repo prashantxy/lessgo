@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { EB_Garamond, IM_Fell_English } from "next/font/google";
+import { SITE, profile } from "@/content/site";
 import "./globals.css";
 
 /* The book is a 17th-century binding, so the page is set like one: Fell's
@@ -18,8 +19,6 @@ const sans = EB_Garamond({
   subsets: ["latin"],
   display: "swap",
 });
-
-const SITE = "https://prashantdubey.work";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
@@ -43,6 +42,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE,
+    locale: "en_US",
     title: "Prashant Dubey — the field notebook",
     description:
       "Graph-structured knowledge systems, terminal-native tooling, and supply-chain security.",
@@ -50,11 +50,28 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    /* TODO(prashant): add `creator: "@yourhandle"` once the X handle is confirmed —
+       it is what puts your name on the card byline. */
     title: "Prashant Dubey — the field notebook",
     description:
       "Graph-structured knowledge systems, terminal-native tooling, and supply-chain security.",
   },
   icons: { icon: "/favicon.ico" },
+  /* Canonicals, and the feed as a real <link rel="alternate"> so readers
+     discover it from the page rather than from a URL someone guessed. */
+  alternates: {
+    canonical: "/",
+    types: {
+      "application/rss+xml": [{ url: "/feed.xml", title: "Prashant Dubey — the field notebook" }],
+    },
+  },
+  creator: profile.name,
+  publisher: profile.name,
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+  },
 };
 
 export default function RootLayout({

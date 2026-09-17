@@ -5,6 +5,7 @@ import { ContactShadows, Environment, Html, Lightformer, useGLTF } from "@react-
 import { memo, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import * as THREE from "three";
 import type { PostMeta } from "@/lib/format";
+import Desk from "./Desk";
 import { buildSpreads } from "./spreads";
 import { TURNS, TURN_PLAN, bookScroll, getSpread, setInvalidate, subscribeSpread } from "./state";
 
@@ -296,6 +297,15 @@ function Book({ posts }: { posts: PostMeta[] }) {
         mat.envMapIntensity = 0.55;
         /* the cut page edges ship untextured and read as white plastic */
         if (/PageEdges/i.test(mat.name)) mat.color.setHex(0xe8dfc6);
+        /* M_Leather_Oxblood ships a pale hide texture that lit like this comes
+           out bright pink — and the tooled title is gold leaf, which has no
+           contrast against pink. `color` multiplies the map, so this tints the
+           cover back down to the oxblood the material is named for and lets
+           the gold read. */
+        if (/Leather/i.test(mat.name)) {
+          mat.color.setHex(0x8a4038);
+          mat.roughness = 0.82;
+        }
         /* the clasps and corner bosses ship untextured and read as white
            plastic; they are meant to be aged brass */
         if (/Brass|Gold/i.test(mat.name)) {
@@ -712,6 +722,16 @@ function Stage({ posts }: { posts: PostMeta[] }) {
       />
       {/* cool fill, so the vellum does not go flat and orange */}
       <directionalLight position={[-0.5, 0.35, -0.45]} intensity={0.5} color="#cfe0ef" />
+
+      {/* The pool of light the book is read in. Sits low and close so its
+          falloff is visible across the desk within the frame — a light this
+          near is what separates "a book on a desk" from "a book on a plane
+          lit evenly to the horizon". No shadow map: the directional light
+          above already casts, and a second shadow-casting light here doubles
+          the cost for a contact shadow nothing would see. */}
+      <pointLight position={[0.16, 0.52, 0.34]} intensity={0.26} distance={1.9} decay={2} color="#ffd9a0" />
+
+      <Desk />
 
       <Book posts={posts} />
 
