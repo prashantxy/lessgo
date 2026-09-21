@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
+import { useFrame } from "@react-three/fiber";
+import { bookScroll } from "./state";
 
 /**
  * The desk the book lies on.
@@ -74,6 +76,23 @@ function grainTexture() {
 
 export default function Desk() {
   const map = useMemo(grainTexture, []);
+  const fog = useRef<THREE.Fog>(null);
+
+  /* The framing that takes in both lamps stands the camera further back than
+     any reading framing does, and on a phone far enough that the falloff had
+     swallowed the desk before the lamps were even in shot. So the fog gives
+     way while the book is shut and closes back in as it opens — which is also
+     when it is wanted, since an open spread is read at arm's length. */
+  useFrame(() => {
+    const f = fog.current;
+    if (!f) return;
+    const out = bookScroll.close;
+    const near = 0.62 + 0.5 * out;
+    if (Math.abs(f.near - near) > 1e-3) {
+      f.near = near;
+      f.far = 2.6 + 1.9 * out;
+    }
+  });
 
   /* Built once and disposed never: the scene outlives the component for the
      life of the page, and R3F disposes both on unmount. */
@@ -81,7 +100,7 @@ export default function Desk() {
     <>
       {/* Near is set past the book's own footprint so the binding itself is
           never touched by fog — only the desk running away from it. */}
-      <fog attach="fog" args={["#17120c", 0.62, 2.6]} />
+      <fog attach="fog" ref={fog} args={["#17120c", 0.62, 2.6]} />
 
       <mesh
         position={[0, -0.0045, 0]}

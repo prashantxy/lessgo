@@ -8,6 +8,8 @@ import { about, highlights, now, profile } from "@/content/site";
 import type { PostMeta } from "@/lib/format";
 import Music from "./Music";
 import { SPREADS, STOPS, TURNS, bookScroll, setSpread, wake } from "./book/state";
+import { boot, finishBoot, onBootDone, setBootPaint, skipBoot } from "./book/boot";
+import { lampSwitch, toggleLamp } from "./book/Lamps";
 import { buildSpreads, roman } from "./book/spreads";
 
 /* WebGL never runs on the server, and the model is fetched lazily either way */
@@ -58,6 +60,16 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
   /* the one piece of React state here: opening the reading sheet is a real UI
      change, and <BookScene /> is memoised so the canvas sits it out */
   const [expanded, setExpanded] = useState(false);
+  /* ... and the landing sequence, which is three renders in its whole life:
+     on, fading, gone. Everything it does in between is painted through refs. */
+  const [boots, setBoots] = useState<"on" | "out" | "off">("on");
+  const capRef = useRef<HTMLSpanElement>(null);
+  /* the lamp's switch. React state for the button's own pressed look only —
+     the scene reads `lampSwitch`, so a click never reaches the canvas tree */
+  const [lampOn, setLampOn] = useState(lampSwitch.on);
+  const lampsRef = useRef<HTMLDivElement>(null);
+  const pctRef = useRef<HTMLSpanElement>(null);
+  const fillRef = useRef<HTMLSpanElement>(null);
 
   /** scroll to a spread — the only way the book is ever turned */
   const goSpread = useCallback((i: number) => {
@@ -71,6 +83,96 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
     window.scrollTo({ top: track.offsetTop + (span * stop) / stops, behavior: "smooth" });
   }, []);
 
+  /* ---- the landing sequence ----
+          The lamp is lit inside the canvas (components/book/Intro.tsx); what
+          lives out here is the chrome over it — the caption, the rule filling
+          as the binding arrives, and the white-out at the burst, which has to
+          be DOM because it covers the page and the index as well as the scene.
+
+          Painted straight to the nodes on the scene's own frame, for the same
+          reason the scroll is: a percentage arriving through setState would
+          re-render the canvas tree a hundred times before the book appeared.
+
+          The document is held at the top for the duration. The whole page is a
+          scroll position, so a reader who arrives mid-sequence with a restored
+          scroll offset would be looking at an opening of a book that has not
+          finished loading, lit by a lamp that is about to explode. ---- */
+  useEffect(() => {
+    if (!boot.active) {
+      setBoots("off");
+      return;
+    }
+
+    const html = document.documentElement;
+    const prevRestore = history.scrollRestoration;
+    const prevOverflow = html.style.overflow;
+    history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+    html.style.overflow = "hidden";
+
+    const CAPTION: Record<string, string> = {
+      load: "gathering the quires",
+      dawn: "",
+      done: "",
+    };
+    let shown = "";
+
+    setBootPaint((b) => {
+      /* the rule is the fetch until the fetch is done, then it is full */
+      const fill = b.phase === "load" ? Math.max(b.progress, b.bookIn ? 1 : 0) : 1;
+      if (fillRef.current) fillRef.current.style.transform = `scaleX(${fill})`;
+      if (pctRef.current) {
+        const pct = `${Math.round(fill * 100)}`;
+        if (pctRef.current.textContent !== pct) pctRef.current.textContent = pct;
+      }
+      if (capRef.current && CAPTION[b.phase] !== shown) {
+        shown = CAPTION[b.phase];
+        capRef.current.textContent = shown;
+      }
+    });
+
+    /* anything the reader does means "get on with it" */
+    const skip = () => skipBoot();
+    const keys = (e: KeyboardEvent) => {
+      if (e.key === "Tab" || e.metaKey || e.ctrlKey || e.altKey) return;
+      skip();
+    };
+    window.addEventListener("keydown", keys);
+    window.addEventListener("pointerdown", skip);
+    window.addEventListener("wheel", skip, { passive: true });
+    window.addEventListener("touchstart", skip, { passive: true });
+
+    /* The sequence's clock lives in the render loop, so if the canvas never
+       gets one — WebGL refused, the chunk failed to load, a driver crash —
+       nothing would ever unlock the document and the page would be a caption
+       over a dark desk for good. This is the only thing here that does not
+       depend on the scene running. */
+    const bail = window.setTimeout(finishBoot, 15000);
+
+    let fade: number | undefined;
+    const off = onBootDone(() => {
+      clearTimeout(bail);
+      html.style.overflow = prevOverflow;
+      /* the track was never measurable while the document could not scroll */
+      ScrollTrigger.refresh();
+      setBoots("out");
+      fade = window.setTimeout(() => setBoots("off"), 700);
+    });
+
+    return () => {
+      off();
+      setBootPaint(null);
+      clearTimeout(bail);
+      clearTimeout(fade);
+      html.style.overflow = prevOverflow;
+      history.scrollRestoration = prevRestore;
+      window.removeEventListener("keydown", keys);
+      window.removeEventListener("pointerdown", skip);
+      window.removeEventListener("wheel", skip);
+      window.removeEventListener("touchstart", skip);
+    };
+  }, []);
+
   /* ---- scroll → book. Writes to the DOM and to the shared store directly;
           putting any of this in state would re-render the canvas tree. ---- */
   useEffect(() => {
@@ -80,14 +182,19 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
     gsap.registerPlugin(ScrollTrigger);
 
     const narrow = window.matchMedia("(max-width: 900px)");
+    /* the desk's own question: is there width beside the board for the things
+       that live on it — see `bookScroll.roomy` */
+    const roomy = window.matchMedia("(min-width: 700px)");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
     const syncEnv = () => {
       bookScroll.layout = narrow.matches ? "narrow" : "wide";
+      bookScroll.roomy = roomy.matches;
       bookScroll.reduced = reduce.matches;
       wake();
     };
     syncEnv();
     narrow.addEventListener("change", syncEnv);
+    roomy.addEventListener("change", syncEnv);
     reduce.addEventListener("change", syncEnv);
 
     /* paint everything that follows the scroll: index, folio, progress rule.
@@ -107,6 +214,13 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
       const lift = Math.max(0, Math.min(1, q0));
       bookScroll.close = 1 - lift * lift * (3 - 2 * lift);
       const q = Math.max(0, q0 - 1);
+      /* the switches belong to the lamps, and the lamps belong to the shut
+         book — both are gone by the time the covers are half up */
+      if (lampsRef.current) {
+        const on = bookScroll.close > 0.45;
+        const flag = on ? "true" : "false";
+        if (lampsRef.current.dataset.lit !== flag) lampsRef.current.dataset.lit = flag;
+      }
 
       let i: number;
       if (narrowNow) {
@@ -168,6 +282,7 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
     return () => {
       cancelAnimationFrame(refresh);
       narrow.removeEventListener("change", syncEnv);
+      roomy.removeEventListener("change", syncEnv);
       reduce.removeEventListener("change", syncEnv);
       tween.scrollTrigger?.kill();
       tween.kill();
@@ -185,6 +300,14 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
           Deliberately its own ScrollTrigger: the book's one runs the length of
           `.scroll-track` and this begins exactly where that ends. ---- */
   useEffect(() => {
+    /* Not while the lamp is burning, for two separate reasons. The timeline
+       measures a document that cannot scroll yet, and — the one that actually
+       showed — `fromTo` renders its start values immediately, which writes
+       `opacity: 1` inline onto the index, the folio and the dust. An inline
+       style beats any stylesheet rule, so the chrome the loader had hidden
+       came straight back on top of the dark room. */
+    if (boots === "on") return;
+
     const plate = plateRef.current;
     const dive = diveRef.current;
     if (!plate || !dive) return;
@@ -244,11 +367,12 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
       tl.kill();
       gsap.set([plate, ...behind, ...lines], { clearProps: "all" });
     };
-  }, []);
+  }, [boots]);
 
   /* ---- keyboard: one opening at a time ---- */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (boot.active) return;
       if (expanded) {
         if (e.key === "Escape") setExpanded(false);
         return;
@@ -271,7 +395,33 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
   const allSpreads = useMemo(() => buildSpreads(posts), [posts]);
 
   return (
-    <div className="codex">
+    <div className="codex" data-boot={boots === "off" ? undefined : boots}>
+      {/* The landing sequence's chrome. Rendered on the server as well, so the
+          page arrives already in its loading state rather than showing a book
+          for one frame and then covering it up. */}
+      {boots !== "off" && (
+        <div className="boot" data-state={boots}>
+          <p className="boot-line" aria-hidden="true">
+            <span className="boot-caption" ref={capRef}>
+              striking a light
+            </span>
+            <span className="boot-rule">
+              <span ref={fillRef} />
+            </span>
+            <span className="boot-pct">
+              <span ref={pctRef}>0</span>
+              <i>%</i>
+            </span>
+          </p>
+          <p className="boot-hint" aria-hidden="true">
+            press any key
+          </p>
+          <p className="boot-status" role="status">
+            Loading the notebook
+          </p>
+        </div>
+      )}
+
       {/* the binding — decorative chrome; the text on it is real DOM */}
       <div className="stage">
         <BookScene posts={posts} />
@@ -400,6 +550,20 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
           ))}
         </ol>
       </nav>
+
+      {/* The lamp's switch. It only exists while the book is shut, which is the
+          only time the lamp is on the desk. */}
+      <div className="lamp-switches" ref={lampsRef} data-lit="true">
+        <button
+          type="button"
+          className="lamp-switch"
+          aria-pressed={lampOn}
+          onClick={() => setLampOn(toggleLamp())}
+        >
+          <span className="lamp-bulb" aria-hidden="true" />
+          desk lamp
+        </button>
+      </div>
 
       <div className="quire" aria-hidden="true">
         <span ref={barRef} />

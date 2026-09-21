@@ -2,10 +2,14 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Html, Lightformer, useGLTF } from "@react-three/drei";
-import { memo, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { Suspense, memo, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import * as THREE from "three";
 import type { PostMeta } from "@/lib/format";
 import Desk from "./Desk";
+import Intro from "./Intro";
+import Essentials, { DESK_FRAME } from "./Essentials";
+import Lamps, { LAMP_BACK, LAMP_TOP } from "./Lamps";
+import { boot } from "./boot";
 import { buildSpreads } from "./spreads";
 import { TURNS, TURN_PLAN, bookScroll, getSpread, setInvalidate, subscribeSpread } from "./state";
 
@@ -36,8 +40,11 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 type Mark = { at: number; dist: number; el: number; yaw: number };
 
 const MARKS: Mark[] = [
-  /* shut on the desk: a low, raking angle that catches the tooling */
-  { at: 0.0, dist: 1.04, el: 46, yaw: -10 },
+  /* Shut on the desk: a low, raking angle that catches the tooling. Lower
+     than it reads, because this mark now frames a whole desk rather than a
+     board — from 46° you are looking at the top of everything on it, and a mug
+     and an inkwell seen from above are two circles. */
+  { at: 0.0, dist: 1.04, el: 38, yaw: -13 },
   { at: 0.11, dist: 1.0, el: 69, yaw: -2 },
   { at: 0.5, dist: 0.99, el: 72, yaw: 0 },
   { at: 0.9, dist: 1.0, el: 69, yaw: 2 },
@@ -55,6 +62,28 @@ function markAt(p: number, out: Mark) {
   out.yaw = lerp(a.yaw, b.yaw, t);
   return out;
 }
+
+/**
+ * How much of the frame the desk fills while the book is shut on it.
+ *
+ * Bigger than the reading `fill` below, and deliberately: the shut book is the
+ * landing, and framing the whole desk — blotter, lamp, the things beside it —
+ * at the same fill as a single opening leaves the book a small object in a lot
+ * of dark. The phone stops at 1: the blotter's edges crop there anyway, and
+ * going past it starts taking the corners of the board with them.
+ */
+const SHUT_FILL = { wide: 1.02, narrow: 1 };
+
+/**
+ * And where on screen the desk sits while it is the subject. The reading
+ * framing below pushes the book right to clear the index in the left margin
+ * and lifts it a little; the desk is wider and taller than the book, so it
+ * wants to sit closer to the middle of the frame than the board does.
+ */
+const SHUT_FRAME = {
+  wide: { x: -0.02, y: 0.03 },
+  narrow: { x: 0, y: 0.02 },
+};
 
 /** where the book sits on screen, as a fraction of the frame, per layout */
 const FRAMING = {
@@ -444,13 +473,26 @@ function Book({ posts }: { posts: PostMeta[] }) {
     invalidate();
   }, [invalidate, size.width, size.height]);
 
+  /* The landing sequence waits on this and not on the loading manager's
+     percentage. `useGLTF` suspends, so this component existing at all is the
+     only statement worth making about whether the binding has arrived: the
+     bytes being in is not the same as the scene being in the graph. */
+  useEffect(() => {
+    boot.bookIn = true;
+    invalidate();
+  }, [invalidate]);
+
   useFrame((_, dt) => {
     const cam = camera as THREE.PerspectiveCamera;
     const s = scratch;
 
-    /* ---- settling onto the desk, once, on load ---- */
+    /* ---- settling onto the desk, once, on load ----
+       Skipped outright when the page came up on the lamp: the book has been
+       lying on that desk under the lamp for the whole sequence, and dropping
+       it onto the desk again the moment the camera arrives would undo the one
+       thing the loader established. The arrival is the camera's, below. */
     if (s.intro < 1 && group.current) {
-      s.intro = bookScroll.reduced ? 1 : Math.min(1, s.intro + dt / 0.85);
+      s.intro = bookScroll.reduced || boot.active ? 1 : Math.min(1, s.intro + dt / 0.85);
       const e = 1 - (1 - s.intro) ** 3;
       group.current.position.y = (1 - e) * span * 0.1;
       group.current.rotation.x = (1 - e) * -0.1;
@@ -572,9 +614,21 @@ function Book({ posts }: { posts: PostMeta[] }) {
        folded over to the spine side; a phone reads a single leaf */
     const leafX = geom.gutter / 2 + geom.pageW / 2;
     const openSpan = bookScroll.layout === "narrow" ? geom.pageW * 1.02 : span;
-    const shutSpan = geom.boardW * 1.06;
+    /* Shut, the frame is not the board's — the two lamps stand either side of
+       it and have to be in the picture with it, so the width to fit is theirs.
+       They fade out over the first half of the first scroll, and this eases
+       back to the board over exactly the same stretch, which is why the book
+       appears to come *toward* you as the covers lift. */
+    const deskFrame = DESK_FRAME[bookScroll.roomy ? "roomy" : "bare"];
+    const shutSpan = Math.max(geom.boardW * 1.06, deskFrame.span);
     let fitSpan = lerp(openSpan, shutSpan, s.close);
-    const focusX = lerp(bookScroll.pageFocus * leafX, shutCentre, s.close);
+    /* Shut, the subject is the whole desk — the board, and the inkwell and mug
+       and leaves either side of it — so what the camera centres on is the
+       middle of all that rather than the middle of the book, which on a wide
+       screen would leave the mug hanging off the edge. It eases back onto the
+       book itself as the covers lift, over the same stretch the desk clears
+       on. On a phone there is no clutter and the two are the same point. */
+    const focusX = lerp(bookScroll.pageFocus * leafX, deskFrame.centre, s.close);
 
     const halfY = Math.tan((cam.fov * Math.PI) / 360);
     const halfX = halfY * cam.aspect;
@@ -598,20 +652,26 @@ function Book({ posts }: { posts: PostMeta[] }) {
     const fitTall =
       geom.pageH * Math.sin(el) +
       geom.stackT * Math.cos(el) +
+      /* The lamp stands behind the board and reaches over it, so it costs the
+         frame on both counts: the depth of the desk it stands back across, and
+         its own height above it. Framing only what lies flat crops the shade
+         off the top. */
+      2 * (LAMP_BACK * Math.sin(el) + LAMP_TOP * Math.cos(el)) * 0.46 * s.close +
       geom.pageH * 1.05 * Math.cos(el) * bookScroll.lift +
       (geom.boardW + geom.blockTop) * 1.3 * Math.cos(el) * foldUp;
     fitSpan += geom.boardW * 0.22 * foldUp;
     const near = (geom.pageH / 2) * Math.cos(el);
-    let dist = Math.max(fitSpan / 2 / halfX, fitTall / 2 / halfY) / frame.fill;
+    const fill = lerp(frame.fill, SHUT_FILL[bookScroll.layout], s.close);
+    let dist = Math.max(fitSpan / 2 / halfX, fitTall / 2 / halfY) / fill;
     for (let i = 0; i < 3; i++) {
       const magnify = dist / Math.max(1e-4, dist - near);
-      dist =
-        (Math.max((fitSpan * magnify) / 2 / halfX, (fitTall * magnify) / 2 / halfY) /
-          frame.fill);
+      dist = Math.max((fitSpan * magnify) / 2 / halfX, (fitTall * magnify) / 2 / halfY) / fill;
     }
     dist *= mark.dist;
 
-    s.focusTo.set(focusX, span * 0.03 + geom.stackT * s.close, 0);
+    /* and the middle of the picture sits back toward it, between the book's
+       near edge and the shade, rather than on the book's own centre line */
+    s.focusTo.set(focusX, span * 0.03 + geom.stackT * s.close, -LAMP_BACK * 0.3 * s.close);
     s.camTo
       .set(Math.sin(yaw) * Math.cos(el), Math.sin(el), Math.cos(yaw) * Math.cos(el))
       .multiplyScalar(dist)
@@ -625,10 +685,16 @@ function Book({ posts }: { posts: PostMeta[] }) {
     /* The standing cover is all above the desk, so the whole image has to sit
        lower in the frame while it is up — otherwise the extra distance that
        fits it just shrinks the book instead of revealing the board. */
-    const frameY = lerp(frame.y, -0.05, foldUp);
+    /* Shut, the subject is a lamp standing over a book, and the height that
+       takes is all above the desk — fit it and the slack all falls to the
+       bottom of the frame. So the whole image drops a little while the lamp is
+       there, and comes back to the reading framing as it goes. */
+    const shutFrame = SHUT_FRAME[bookScroll.layout];
+    const frameX = lerp(frame.x, shutFrame.x, s.close);
+    const frameY = lerp(lerp(frame.y, shutFrame.y, s.close), -0.05, foldUp);
     s.shift
       .setFromMatrixColumn(s.basis, 0)
-      .multiplyScalar(frame.x * viewW)
+      .multiplyScalar(frameX * viewW)
       .addScaledVector(s.up.setFromMatrixColumn(s.basis, 1), -frameY * viewH);
     s.camTo.add(s.shift);
     s.focusTo.add(s.shift);
@@ -713,10 +779,11 @@ function Stage({ posts }: { posts: PostMeta[] }) {
         shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0001}
         shadow-normalBias={0.004}
-        shadow-camera-left={-0.4}
-        shadow-camera-right={0.4}
-        shadow-camera-top={0.4}
-        shadow-camera-bottom={-0.4}
+        /* wide enough for the desk either side of the book, not just the book */
+        shadow-camera-left={-0.66}
+        shadow-camera-right={0.66}
+        shadow-camera-top={0.66}
+        shadow-camera-bottom={-0.66}
         shadow-camera-near={0.05}
         shadow-camera-far={2.5}
       />
@@ -733,7 +800,18 @@ function Stage({ posts }: { posts: PostMeta[] }) {
 
       <Desk />
 
-      <Book posts={posts} />
+      {/* Its own boundary, and not the canvas's. R3F suspends the whole tree
+          on the one drei puts round `children`, which would hold the lamp back
+          until the 3.3 MB it is there to cover had finished arriving. */}
+      <Suspense fallback={null}>
+        <Book posts={posts} />
+      </Suspense>
+
+      {/* the desk the book is shut on, the lamp standing over it, and the
+          room's light level while the binding is still on its way */}
+      <Essentials />
+      <Lamps />
+      <Intro />
 
       {/* An open book lies flat, so it covers its own contact shadow — the
           heavy blur is what lets a soft halo bleed out past the boards. `far`

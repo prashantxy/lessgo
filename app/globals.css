@@ -1138,6 +1138,221 @@ a:hover {
   }
 }
 
+/* ---- the landing sequence ------------------------------------------------
+   A lamp is struck on a dark desk, the binding arrives, the lamp blows up and
+   the camera settles onto the book. All of the light and all of the motion is
+   in the canvas (components/book/Intro.tsx); what lives here is the chrome
+   over it and the white-out at the burst.
+
+   The flash is DOM and not a mesh in the scene on purpose: it has to cover the
+   page behind the alpha canvas as well as the scene in front of it, because
+   the moment it is brightest is the moment the scene stops painting its own
+   dark background and hands the backdrop back to <html>. Its opacity is
+   written from the frame loop, so there is no transition on it. */
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  /* the wheel, and everything else, still reaches the document */
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 1.25rem clamp(2rem, 7vh, 3.4rem);
+  transition: opacity 0.55s var(--ease);
+}
+.boot[data-state="out"] {
+  opacity: 0;
+}
+
+.boot-line {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.7rem, 2vw, 1.1rem);
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  letter-spacing: 0.24em;
+  text-transform: lowercase;
+  color: #e9d8b3;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.7);
+  animation: boot-in 0.9s var(--ease) both;
+}
+/* the caption changes under the reader; a fixed box keeps the rule still */
+.boot-caption {
+  min-width: 8.5em;
+  text-align: right;
+}
+.boot-rule {
+  position: relative;
+  display: block;
+  width: min(34vw, 240px);
+  height: 1px;
+  background: rgba(233, 216, 179, 0.22);
+  overflow: hidden;
+}
+.boot-rule > span {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(90deg, #c69a4e, #f4e3bd);
+  /* the percentage arrives in jumps; the rule should not */
+  transition: transform 0.35s var(--ease);
+}
+.boot-pct {
+  min-width: 3.2em;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+}
+.boot-pct i {
+  font-style: normal;
+  opacity: 0.45;
+  margin-left: 0.15em;
+}
+.boot-hint {
+  margin: 0.9rem 0 0;
+  font-family: var(--font-sans);
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+  color: rgba(233, 216, 179, 0.42);
+  /* only offered once the wait is long enough to be worth skipping */
+  animation: boot-in 1s var(--ease) 2.2s both;
+}
+@keyframes boot-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+
+/* ---- the lamp switches ---------------------------------------------------
+   One per lamp. They live with the lamps, which live with the shut book, so
+   `data-lit` is written from the scroll paint in Book3D — the same frame the
+   covers start to lift, both switches go with them. */
+.lamp-switches {
+  position: fixed;
+  z-index: 22;
+  /* top right, tucked under the expand button rather than beside it: the two
+     are both chrome for the shut book and they read as one column there */
+  right: clamp(1rem, 3vw, 2.4rem);
+  top: calc(clamp(0.9rem, 2.4vh, 1.6rem) + 2.4rem);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  text-align: right;
+  transition:
+    opacity 0.45s var(--ease),
+    transform 0.45s var(--ease);
+}
+.lamp-switches[data-lit="false"] {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+.lamp-switch {
+  display: inline-flex;
+  /* the bead on the outside, so the column has a straight right edge */
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 0.6ch;
+  padding: 0.28rem 0.1rem;
+  border: 0;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+  color: rgba(233, 216, 179, 0.4);
+  cursor: pointer;
+  transition: color 0.25s var(--ease);
+}
+.lamp-switch:hover {
+  color: rgba(244, 230, 198, 0.75);
+}
+.lamp-switch[aria-pressed="true"] {
+  color: rgba(244, 230, 198, 0.82);
+}
+.lamp-switch:focus-visible {
+  outline: 1px solid rgba(244, 230, 198, 0.6);
+  outline-offset: 3px;
+}
+/* the switch says what the lamp is doing: a cold ring, or a lit filament */
+.lamp-bulb {
+  width: 7px;
+  height: 7px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  transition:
+    background 0.25s var(--ease),
+    box-shadow 0.25s var(--ease);
+}
+.lamp-switch[aria-pressed="true"] .lamp-bulb {
+  border-color: #ffd9a8;
+  background: #ffc98a;
+  box-shadow: 0 0 9px 2px rgba(255, 190, 110, 0.5);
+}
+
+/* The book's own furniture has nothing to say while the lamp is burning.
+
+   `animation: none` and not just `opacity: 0`: the chrome arrives on a
+   staggered `chrome-in` with `both` fill, and an animation's own values beat a
+   plain declaration in the cascade no matter how specific it is. Cancelling
+   the animation outright has the better side effect as well — when the
+   attribute goes at the end of the burst the animation starts from the
+   beginning, so the index, the folio and the tabs come up around the book in
+   their authored order, timed off the reveal instead of off page load. */
+.codex[data-boot="on"] .index,
+.codex[data-boot="on"] .quire,
+.codex[data-boot="on"] .running-head,
+.codex[data-boot="on"] .expand-btn,
+.codex[data-boot="on"] .tabs,
+.codex[data-boot="on"] .lamp-switches,
+.codex[data-boot="on"] .motes {
+  animation: none;
+  opacity: 0;
+  pointer-events: none;
+}
+.index,
+.quire,
+.running-head,
+.expand-btn,
+.tabs,
+.lamp-switches,
+.motes {
+  transition: opacity 0.7s var(--ease);
+}
+
+/* the sequence announced once, for a reader who cannot see it */
+.boot-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-line,
+  .boot-hint {
+    animation: none;
+  }
+  .boot-hint {
+    display: none;
+  }
+  .boot-rule > span {
+    transition: none;
+  }
+}
+
 /* ---- the air above the desk ---------------------------------------------
    Dust caught in the lamp light, and the landing sequence the page arrives
    with.
@@ -1198,7 +1413,8 @@ a:hover {
 .quire,
 .running-head,
 .expand-btn,
-.tabs {
+.tabs,
+.lamp-switches {
   animation: chrome-in 0.75s var(--ease) both;
 }
 .index {
@@ -1214,6 +1430,9 @@ a:hover {
 .tabs {
   animation-delay: 1.04s;
 }
+.lamp-switches {
+  animation-delay: 1.12s;
+}
 
 @media (prefers-reduced-motion: reduce) {
   /* no drifting dust, and no staged entrance — everything is simply there */
@@ -1224,7 +1443,8 @@ a:hover {
   .quire,
   .running-head,
   .expand-btn,
-  .tabs {
+  .tabs,
+  .lamp-switches {
     animation: none;
   }
 }
@@ -1927,17 +2147,31 @@ html:has(.codex) {
 }
 .board-open {
   position: absolute;
-  bottom: 66px;
+  /* higher up the board and a size larger: it is the one instruction the
+     landing gives, and down in the tail of the cover at 12px it was the
+     smallest thing on a desk full of larger ones */
+  bottom: 96px;
   font-family: var(--font-hand);
   font-variant: small-caps;
-  letter-spacing: 0.18em;
-  font-size: 12px;
-  opacity: 0.8;
+  letter-spacing: 0.2em;
+  font-size: 15px;
+  /* Lit for the dark room, not for the page it was written against. This is
+     DOM laid on the cover through a CSS3D transform, so the scene's own lights
+     never touch it — when the desk went dark around it, dim gold tooling at
+     0.8 stopped being legible and started being texture. Cream rather than
+     gold, a hard shadow to lift it off the leather, and a warm halo so it
+     reads as catching the lamp. */
+  color: #f6e8c6;
+  opacity: 0.95;
+  text-shadow:
+    0 1px 3px rgba(20, 12, 6, 0.95),
+    0 0 16px rgba(255, 210, 145, 0.45);
   animation: board-beckon 2.6s var(--ease) infinite;
 }
 @keyframes board-beckon {
   50% {
-    opacity: 0.35;
+    /* it pulses, it does not go out */
+    opacity: 0.55;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -55,6 +55,14 @@ export const bookScroll = {
   /** 1 shut on the desk, 0 lying open. */
   close: 1,
   layout: "wide" as Layout,
+  /**
+   * Whether there is room across the frame for the desk around the book — the
+   * blotter's clutter, not the book itself. Its own media query and not
+   * `layout`, because the two ask different questions: `layout` asks how many
+   * pages can be read at once and turns over at 900px, and a tablet below that
+   * still has plenty of width for an inkwell beside the board.
+   */
+  roomy: true,
   reduced: false,
 };
 
