@@ -1464,11 +1464,23 @@ a:hover {
 .leaf-html {
   /* opacity is owned by the render loop — it starts shut, so start invisible */
   opacity: 0;
-  /* transparent: the vellum underneath is the page */
-  color: var(--ink);
+  /* Mostly transparent: the vellum underneath is the page. But the model's
+     paper is heavily foxed, and a brown bloom behind a line of type is the
+     single biggest reason the writing was hard to read — so the written area
+     carries a soft wash of size that lifts the text off it and fades to
+     nothing before the margins, where the mottling is wanted. */
+  background: radial-gradient(
+    118% 94% at 50% 47%,
+    rgba(248, 241, 222, 0.66),
+    rgba(248, 241, 222, 0.34) 56%,
+    rgba(248, 241, 222, 0) 84%
+  );
+  /* and a blacker ink than the rest of the site: this one is read through a
+     perspective transform, at an angle, on a textured ground */
+  color: #23190d;
   font-family: var(--font-sans);
   font-size: 15px;
-  line-height: 1.52;
+  line-height: 1.58;
   padding: 52px 46px 44px;
   display: flex;
   flex-direction: column;
@@ -1539,7 +1551,10 @@ a:hover {
 }
 .catchword {
   font-style: italic;
-  opacity: 0.75;
+  /* it is a printer's joke, not something to read — at this size it was being
+     mistaken for a stray word left on the page */
+  opacity: 0.45;
+  font-size: 0.86em;
 }
 
 /* ---- text on the leaf ---- */
@@ -1547,8 +1562,14 @@ a:hover {
 .folio-prose {
   margin: 0 0 10px;
   max-width: none;
-  text-align: justify;
-  hyphens: auto;
+  /* Ragged right, not justified. A justified measure this narrow — about 40
+     characters — opens rivers of white down the middle of every paragraph and
+     hyphenates a word in four ("inter-face", "mi-croservices"), and on a page
+     that is already mottled parchment seen at an angle that is most of what
+     makes it hard to read. `pretty` keeps the rag from going ragged. */
+  text-align: left;
+  hyphens: manual;
+  text-wrap: pretty;
 }
 /* a rubricated opening initial, cut three lines into the text block */
 .initial {
