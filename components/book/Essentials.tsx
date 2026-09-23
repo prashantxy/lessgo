@@ -91,7 +91,34 @@ export const DESK_FRAME = {
   bare: { span: 0.235, centre: CENTRE },
 };
 
+/** the mug's rim, in world metres — where the steam comes off */
+const MUG_TOP = new THREE.Vector3(0.425, 0.084, 0.075);
+/** the inkwell, and the height of the ink in its neck */
+const WELL_AT = new THREE.Vector3(-0.04, 0.0315, -0.05);
+/** how many wisps are in the air at once */
+const WISPS = 6;
+
 /* ------------------------------------------------------------------ shapes */
+
+/**
+ * One soft puff, for the steam. Drawn once at mount; a radial falloff on a
+ * canvas is all a wisp is at this size.
+ */
+function puffTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d");
+  if (!g) return null;
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, "rgba(255,255,255,0.9)");
+  grad.addColorStop(0.45, "rgba(255,255,255,0.35)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
 
 /** a surface of revolution from a [radius, height] profile */
 function lathe(profile: [number, number][], segments = 40) {
@@ -246,7 +273,7 @@ function buildDesk() {
   put(slab(0.44, 0.33, 0.004, 0.005), pad, blotter, [CENTRE, 0.0022, 0], undefined, false);
 
   /* ---- the inkwell: a squat pot, a brass collar, and ink in the neck ---- */
-  const well = part(clutter, [-0.04, 0, -0.05], 0.3);
+  const well = part(clutter, [WELL_AT.x, 0, WELL_AT.z], 0.3);
   put(
     lathe([
       [0, 0],
@@ -268,6 +295,26 @@ function buildDesk() {
   );
   put(new THREE.TorusGeometry(0.0197, 0.0035, 10, 30), brass, well, [0, 0.0345, 0], [-Math.PI / 2, 0, 0]);
   put(new THREE.CircleGeometry(0.0178, 24), ink, well, [0, 0.0315, 0], [-Math.PI / 2, 0, 0]);
+  /* the pen dips when it is brought over the pot — see Essentials below */
+  for (const o of well.children) o.userData.well = true;
+  /* and the ink takes it: a ring spreading out across the surface. Its own
+     material, outside `fade` — its opacity is the ripple, not the covers. */
+  const rippleMat = new THREE.MeshBasicMaterial({
+    color: 0x8a8f99,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+  });
+  const ripple = put(
+    new THREE.RingGeometry(0.8, 1, 32),
+    rippleMat,
+    well,
+    [0, 0.0318, 0],
+    [-Math.PI / 2, 0, 0],
+    false,
+    true,
+  );
+  ripple.visible = false;
 
   /* ---- the pen ----
      Not a thing lying on the desk: this is the pointer. It is built here
@@ -339,6 +386,29 @@ function buildDesk() {
   const handle = put(new THREE.TorusGeometry(0.0185, 0.0052, 10, 26), stone, mug, [0.045, 0.046, 0]);
   handle.scale.set(1, 1.15, 0.72);
 
+  /* ---- the coffee is still hot ----
+     A handful of sprites rising off the rim, each on its own slow loop. Kept
+     faint: steam you notice on the second look is a warm cup; steam you
+     notice first is a special effect. */
+  const puff = puffTexture();
+  const steam = new THREE.Group();
+  const wisps: THREE.Sprite[] = [];
+  for (let i = 0; i < WISPS; i++) {
+    const m = new THREE.SpriteMaterial({
+      map: puff ?? undefined,
+      color: 0xe8dcc6,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    const w = new THREE.Sprite(m);
+    w.raycast = () => {};
+    steam.add(w);
+    wisps.push(w);
+  }
+  steam.position.copy(MUG_TOP);
+  clutter.add(steam);
+
   /* ---- the leaves, and the letter they are lying on ---- */
   const leaves = part(clutter, [0.402, 0, -0.112], -0.24);
   put(slab(0.15, 0.195, 0.0016, 0.002), blank, leaves, [0.004, 0, 0.002], [0, 0.06, 0], false);
@@ -395,7 +465,23 @@ function buildDesk() {
     arm.rotateY(0);
   }
 
-  return { blotter, clutter, pen, card: card3d, note, hits, fade, fixed, geos, painted, streak };
+  return {
+    blotter,
+    clutter,
+    pen,
+    card: card3d,
+    note,
+    hits,
+    fade,
+    fixed,
+    geos,
+    painted,
+    streak,
+    ripple,
+    rippleMat,
+    wisps,
+    puff,
+  };
 }
 
 const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
@@ -438,6 +524,12 @@ export default function Essentials() {
       seen: false,
       link: false,
       lift: 0,
+      /* over the inkwell: the nib goes into the ink */
+      dip: false,
+      /* 0..1 through the ripple the dip sets off; 1 is still */
+      ring: 1,
+      /* seconds of steam, for the wisps' loops */
+      t: 0,
       ray: new THREE.Raycaster(),
       ndc: new THREE.Vector2(),
       desk: new THREE.Plane(new THREE.Vector3(0, 1, 0), -DESK_Y),
@@ -551,7 +643,14 @@ export default function Essentials() {
         return;
       }
 
-      cur.to.set(cur.at.x, cur.at.y + PEN_HOVER, cur.at.z);
+      /* Brought over the pot, the pen goes to the ink rather than resting on
+         the rim — a pointer anywhere on the well means "dip", the way a real
+         hand would not balance a pen on the collar. Once per arrival. */
+      const dip = found.length > 0 && found[0].distance <= best + 1e-6 && !!found[0].object.userData.well;
+      if (dip) cur.to.copy(WELL_AT).setY(WELL_AT.y - 0.004);
+      else cur.to.set(cur.at.x, cur.at.y + PEN_HOVER, cur.at.z);
+      if (dip && !cur.dip) cur.ring = 0;
+      cur.dip = dip;
       if (!cur.on) {
         cur.on = true;
         /* it does not fly in from wherever it was last seen */
@@ -598,14 +697,39 @@ export default function Essentials() {
       for (const g of desk.geos) g.dispose();
       for (const p of desk.painted) dropPainted(p);
       desk.streak.dispose();
+      desk.rippleMat.dispose();
+      desk.puff?.dispose();
+      for (const w of desk.wisps) w.material.dispose();
     };
   }, [desk]);
+
+  /* ---- the room is alive while you are looking at it ----
+     The canvas renders on demand, so steam and a ripple would freeze the
+     moment nothing else asked for a frame. This asks, at a steady thirty a
+     second — and only while the desk is in shot, the reader has not asked for
+     stillness, and the tab is showing. Once the book is open the desk is out
+     of frame and the loop goes back to sleeping. */
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (document.hidden || bookScroll.reduced || !bookScroll.roomy) return;
+      if (bookScroll.close < 0.6) return;
+      invalidate();
+    }, 1000 / 30);
+    return () => clearInterval(id);
+  }, [invalidate]);
 
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.1);
     /* the same curve the lamp fades on, so the desk clears as one thing */
     const here = smoothstep(0.62, 0.95, bookScroll.close);
     const show = bookScroll.roomy && here > 0.002;
+
+    /* The blotter is laid for the shut book, which sits right of the spine;
+       open, the book straddles it, and a pad left where it was hangs half out
+       from under the right-hand board. So it goes with the book. */
+    desk.blotter.position.x = -CENTRE * (1 - smoothstep(0, 1, bookScroll.close));
+
     desk.clutter.visible = show;
     if (!show) {
       /* the pen is the desk's cursor, and there is no desk */
@@ -619,6 +743,26 @@ export default function Essentials() {
     for (const m of desk.fade) {
       m.transparent = here < 0.999;
       m.opacity = here;
+    }
+
+    /* ---- steam ---- */
+    const still = bookScroll.reduced;
+    if (!still) cur.t += dt;
+    desk.wisps.forEach((w, i) => {
+      const phase = (cur.t * 0.16 + i / WISPS) % 1;
+      const sway = Math.sin(cur.t * 0.8 + i * 1.7) * 0.007 * phase;
+      w.position.set(sway, 0.004 + phase * 0.085, Math.cos(cur.t * 0.6 + i) * 0.003 * phase);
+      w.scale.setScalar(0.018 + phase * 0.05);
+      w.material.opacity = still ? 0 : 0.11 * Math.sin(Math.PI * phase) * here;
+    });
+
+    /* ---- the ripple ---- */
+    if (cur.ring < 1) {
+      cur.ring = Math.min(1, cur.ring + dt / 1.2);
+      const k = 1 - (1 - cur.ring) ** 2;
+      desk.ripple.visible = cur.ring < 1;
+      desk.ripple.scale.setScalar(0.002 + k * 0.0155);
+      desk.rippleMat.opacity = 0.45 * (1 - cur.ring) * here;
     }
 
     /* ---- the note, when the pointer is on it ----

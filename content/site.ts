@@ -16,6 +16,8 @@ export const profile = {
   links: {
     github: "https://github.com/prashantxy",
     site: "https://prashantdubey.work",
+    /* linked from his own Terrek README */
+    x: "https://x.com/pdubey1924",
     // TODO(prashant): confirm these two handles and re-add them to <Contact />
     linkedin: "",
     codeforces: "",
@@ -98,6 +100,8 @@ export type Project = {
   stack: string[];
   year: string;
   note?: string;
+  /** slug of the long account in content/works/, when there is one */
+  study?: string;
   links: { label: string; href: string }[];
 };
 
@@ -105,6 +109,7 @@ export const projects: Project[] = [
   {
     n: "01",
     name: "Terrek",
+    study: "terrek",
     tag: "Rust CLI / TUI",
     blurb:
       "A terminal-native workflow engine. One pluggable abstraction over OpenAI, Gemini, Claude and Ollama with bring-your-own-key auto-detection, a multi-pane Ratatui interface, and an extensible command system for scripting AI tasks.",
@@ -115,6 +120,7 @@ export const projects: Project[] = [
   {
     n: "02",
     name: "ChainTrace",
+    study: "chaintrace",
     tag: "Supply-chain security",
     blurb:
       "Maps npm and PyPI packages, versions and maintainers into a graph (HydraDB / OpenCypher), then answers the incident question: a package just turned malicious — which of my services are hit, how badly, and through what path. Blast-radius BFS, attack-path search, typosquat detection.",
@@ -128,6 +134,7 @@ export const projects: Project[] = [
   {
     n: "03",
     name: "localhost6767",
+    study: "localhost6767",
     tag: "Desktop-context AI assistant",
     blurb:
       "The backend for a desktop overlay assistant: it watches the active window and clipboard, collects and ranks on-screen context, resolves intent, and answers through OpenAI with a persistent memory layer — streamed over WebSockets.",
@@ -138,6 +145,7 @@ export const projects: Project[] = [
   {
     n: "04",
     name: "FlowGuard",
+    study: "flowguard",
     tag: "Real-time crowd-flow CV",
     blurb:
       "Turns CCTV video into crowd-flow intelligence — density, direction, congestion and counter-flow anomalies — to flag crowd-crush conditions before they build, instead of just counting heads. Operator console over a computer-vision pipeline.",

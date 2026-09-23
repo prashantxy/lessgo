@@ -10,9 +10,19 @@ import Intro from "./Intro";
 import Window from "./Window";
 import Essentials, { DESK_FRAME } from "./Essentials";
 import Lamps, { LAMP_BACK, LAMP_TOP } from "./Lamps";
+import Ribbon from "./Ribbon";
 import { boot } from "./boot";
 import { buildSpreads } from "./spreads";
-import { TURNS, TURN_PLAN, bookScroll, getSpread, setInvalidate, subscribeSpread } from "./state";
+import {
+  TURNS,
+  TURN_PLAN,
+  bookScroll,
+  getSpread,
+  setInvalidate,
+  subscribeSpread,
+  turnBy,
+  wake,
+} from "./state";
 
 /* The authored file is 25 MB of 4K texture; scripts/optimize-book-glb.mjs
    repacks it to 3.3 MB without a visible difference at this framing. */
@@ -95,8 +105,16 @@ const FRAMING = {
   /* pushed a touch right of centre to clear the index in the left margin */
   wide: { x: -0.045, y: 0.03, fill: 0.8 },
   /* lifted clear of the index strip along the bottom edge */
-  narrow: { x: 0, y: 0.055, fill: 1 },
+  /* and a touch past the page's own width: its margins are generous, and the
+     type is what a phone is short of, not the paper round it */
+  narrow: { x: 0, y: 0.055, fill: 1.06 },
 };
+
+/**
+ * How far into its turn a leaf rises when a hand is at its corner — a fraction
+ * of the turn, so the curl is the model's own and not something bent by hand.
+ */
+const PEEK = 0.14;
 
 /* CSS pixels across one page. Bigger means smaller type on the same paper. */
 const PAGE_PX = 420;
@@ -468,6 +486,7 @@ function Book({ posts }: { posts: PostMeta[] }) {
       destT: NaN,
       destC: NaN,
       intro: 0,
+      peek: 0,
       seeded: false,
     }),
     [],
@@ -477,6 +496,90 @@ function Book({ posts }: { posts: PostMeta[] }) {
   useEffect(() => {
     invalidate();
   }, [invalidate, size.width, size.height]);
+
+  /* ---- a hand at the page corner ----
+     Near the outer corners of an open spread the leaf lifts off the block a
+     little — the way you catch a page before you turn it — and a click there
+     turns it. Tested against the corners as they project to the screen, off
+     `window` for the same reason the pen is (`.stage` takes no pointer). */
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const v = new THREE.Vector3();
+    const edge = geom.gutter / 2 + geom.pageW;
+    const CHROME = "a, button, input, textarea, dialog, .index, .tabs, .expand-overlay, .ribbon-tag";
+    let hand = false;
+
+    /* 1 at a corner, falling to 0 a hand's width off it; signed by side */
+    const reach = (e: PointerEvent) => {
+      const g = group.current;
+      if (!g || e.pointerType === "touch") return 0;
+      if (boot.active || bookScroll.reduced || bookScroll.close > 0.02 || bookScroll.dive > 0.05) return 0;
+      if ((e.target as HTMLElement | null)?.closest?.(CHROME)) return 0;
+      const r = canvas.getBoundingClientRect();
+      const radius = Math.max(64, Math.min(r.width, r.height) * 0.11);
+      let best = 0;
+      for (const side of [-1, 1]) {
+        for (const end of [-1, 1]) {
+          v.set(side * edge, geom.top, (end * geom.pageH) / 2).add(scene.position);
+          g.localToWorld(v).project(camera);
+          const x = r.left + ((v.x + 1) / 2) * r.width;
+          const y = r.top + ((1 - v.y) / 2) * r.height;
+          const near = 1 - Math.hypot(e.clientX - x, e.clientY - y) / radius;
+          if (near > Math.abs(best)) best = side * near;
+        }
+      }
+      /* nothing to lift past the last leaf or before the first */
+      if (best > 0 && bookScroll.spread >= TURNS) return 0;
+      if (best < 0 && bookScroll.spread <= 0) return 0;
+      return best;
+    };
+
+    const onMove = (e: PointerEvent) => {
+      const k = reach(e);
+      /* quantised, so a pointer drifting inside the corner does not wake the
+         loop on every pixel */
+      const want = Math.round(k * 20) / 20;
+      const corner = Math.abs(k) > 0.25 ? Math.sign(k) : 0;
+      if (want !== bookScroll.peek || corner !== bookScroll.corner) {
+        bookScroll.peek = want;
+        bookScroll.corner = corner;
+        wake();
+      }
+      if (!!corner !== hand) {
+        hand = !!corner;
+        document.body.style.cursor = hand ? "pointer" : "";
+      }
+    };
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0 || !bookScroll.corner) return;
+      if (Math.abs(reach(e)) <= 0.25) return;
+      turnBy(bookScroll.corner);
+    };
+    const onLeave = () => {
+      if (!bookScroll.peek && !bookScroll.corner) return;
+      bookScroll.peek = 0;
+      bookScroll.corner = 0;
+      if (hand) document.body.style.cursor = "";
+      hand = false;
+      wake();
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerdown", onDown);
+    document.addEventListener("pointerleave", onLeave);
+    window.addEventListener("blur", onLeave);
+    /* a turn moves the corners out from under a still pointer */
+    window.addEventListener("scroll", onLeave, { passive: true });
+    return () => {
+      onLeave();
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("pointerleave", onLeave);
+      window.removeEventListener("blur", onLeave);
+      window.removeEventListener("scroll", onLeave);
+    };
+  }, [gl, camera, geom, scene]);
 
   /* The landing sequence waits on this and not on the loading manager's
      percentage. `useGLTF` suspends, so this component existing at all is the
@@ -589,8 +692,15 @@ function Book({ posts }: { posts: PostMeta[] }) {
     /* ---- pages ---- */
     const target = bookScroll.reduced ? bookScroll.spread : bookScroll.cursor;
     s.cursor = bookScroll.reduced ? target : damp(s.cursor, target, 14, dt);
+    s.peek = bookScroll.reduced ? 0 : damp(s.peek, bookScroll.peek, 9, dt);
+    /* the corner lift: only the leaf under the hand, and only at rest */
+    const rest = Math.round(s.cursor);
+    const settled = Math.abs(s.cursor - rest) < 0.02;
     for (const rig of rigs) {
-      const u = clamp01((s.cursor - rig.turn - rig.lead) / (1 - rig.lead));
+      let c = s.cursor;
+      if (settled && s.peek > 0 && rig.turn === rest) c += s.peek * PEEK;
+      else if (settled && s.peek < 0 && rig.turn === rest - 1) c += s.peek * PEEK;
+      const u = clamp01((c - rig.turn - rig.lead) / (1 - rig.lead));
       rig.action.time = smooth(u) * rig.dur;
     }
     mixer.update(0);
@@ -599,7 +709,11 @@ function Book({ posts }: { posts: PostMeta[] }) {
        the turn — which is also when the spread's content is swapped */
     const lift = clamp01(Math.abs(s.cursor - Math.round(s.cursor)) * 3.4);
     bookScroll.lift = lift;
-    const fade = String(Math.round((1 - lift) * clamp01(1 - s.close * 6) * 100) / 100);
+    /* the writing lies flat on the block, and a lifted corner rises through
+       it — so it steps back a little while one is up */
+    const fade = String(
+      Math.round((1 - lift) * (1 - 0.3 * Math.abs(s.peek)) * clamp01(1 - s.close * 6) * 100) / 100,
+    );
     for (const el of fadeRef.current) {
       if (el && el.style.opacity !== fade) el.style.opacity = fade;
     }
@@ -735,6 +849,7 @@ function Book({ posts }: { posts: PostMeta[] }) {
       Math.abs(s.close - closeTo) > 1e-4 ||
       Math.abs(s.closeV) > 1e-4 ||
       Math.abs(s.cursor - target) > 1e-4 ||
+      Math.abs(s.peek - bookScroll.peek) > 1e-3 ||
       s.pos.distanceToSquared(s.camTo) > 1e-9;
     const retargeted =
       s.destT !== target || s.destC !== closeTo || s.dest.distanceToSquared(s.camTo) > 1e-12;
@@ -763,7 +878,7 @@ function Book({ posts }: { posts: PostMeta[] }) {
 
 /* ------------------------------------------------------------------ scene */
 
-function Stage({ posts }: { posts: PostMeta[] }) {
+function Stage({ posts, shadow }: { posts: PostMeta[]; shadow: number }) {
   const invalidate = useThree((s) => s.invalidate);
 
   /* let the DOM shell wake the loop when the page scrolls */
@@ -781,7 +896,7 @@ function Stage({ posts }: { posts: PostMeta[] }) {
         position={[0.42, 0.78, 0.4]}
         intensity={1.75}
         color="#fff2d6"
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={[shadow * 2, shadow * 2]}
         shadow-bias={-0.0001}
         shadow-normalBias={0.004}
         /* wide enough for the desk either side of the book, not just the book */
@@ -815,6 +930,8 @@ function Stage({ posts }: { posts: PostMeta[] }) {
       {/* the desk the book is shut on, the lamp standing over it, and the
           room's light level while the binding is still on its way */}
       <Essentials />
+      {/* the bookmark, trailing out of the shut book */}
+      <Ribbon />
       {/* the wall behind the desk and the town through its window — its own
           boundary, so the lamp and the desk never wait on the engraving */}
       <Suspense fallback={null}>
@@ -832,7 +949,7 @@ function Stage({ posts }: { posts: PostMeta[] }) {
       <ContactShadows
         position={[0, -0.003, 0]}
         scale={2.1}
-        resolution={512}
+        resolution={shadow}
         far={0.34}
         blur={4.5}
         opacity={0.62}
@@ -850,7 +967,25 @@ function Stage({ posts }: { posts: PostMeta[] }) {
   );
 }
 
+/**
+ * What a phone can afford. Its screen is small, so the pixels saved by a lower
+ * cap are ones nobody can see — but they are the whole of the GPU's work on a
+ * device that is also the one running hot and on battery. Read once: this
+ * decides the size of the drawing buffer, and a rotation does not need to
+ * rebuild the renderer.
+ */
+function budget() {
+  const small =
+    typeof window !== "undefined" &&
+    (window.matchMedia("(max-width: 900px)").matches ||
+      window.matchMedia("(pointer: coarse)").matches);
+  return small
+    ? { dpr: [1, 1.5] as [number, number], shadow: 256 }
+    : { dpr: [1, 1.8] as [number, number], shadow: 512 };
+}
+
 function BookSceneImpl({ posts }: { posts: PostMeta[] }) {
+  const { dpr, shadow } = useMemo(budget, []);
   return (
     <Canvas
       className="stage-canvas"
@@ -858,14 +993,14 @@ function BookSceneImpl({ posts }: { posts: PostMeta[] }) {
       /* three r18x removed PCFSoftShadowMap, which is what a bare `shadows`
          asks for; it falls back to PCF with a console warning. Ask for PCF. */
       shadows="percentage"
-      dpr={[1, 1.8]}
+      dpr={dpr}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       camera={{ fov: 30, near: 0.02, far: 20, position: [0, 0.5, 0.7] }}
       onCreated={({ gl }) => {
         gl.toneMappingExposure = 0.98;
       }}
     >
-      <Stage posts={posts} />
+      <Stage posts={posts} shadow={shadow} />
     </Canvas>
   );
 }

@@ -7,9 +7,11 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { about, highlights, now, profile } from "@/content/site";
 import type { PostMeta } from "@/lib/format";
 import Music from "./Music";
-import { SPREADS, STOPS, TURNS, bookScroll, setSpread, wake } from "./book/state";
+import { rustle, thud } from "./sound";
+import { SPREADS, STOPS, TURNS, bookScroll, setSpread, setTurner, wake } from "./book/state";
 import { boot, finishBoot, onBootDone, setBootPaint, skipBoot } from "./book/boot";
 import { lampSwitch, toggleLamp } from "./book/lampSwitch";
+import { ribbonTag } from "./book/ribbonTag";
 import { buildSpreads, roman } from "./book/spreads";
 
 /* WebGL never runs on the server, and the model is fetched lazily either way */
@@ -48,6 +50,12 @@ const MOTES = [
   { left: 6.4, top: 53.1, s: 3.6, dur: 20.8, delay: -9.1, dx: 49, dy: -71, peak: 0.32 },
 ] as const;
 
+/** an engraving someone asked to see at full size — see <Engraving /> */
+export type PlateView = { src: string; w: number; h: number; alt: string; caption: string };
+
+/** where the reader left off, kept between visits — see the ribbon below */
+const PLACE_KEY = "codex:place";
+
 export default function Book3D({ posts }: { posts: PostMeta[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
@@ -70,6 +78,11 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
   const lampsRef = useRef<HTMLDivElement>(null);
   const pctRef = useRef<HTMLSpanElement>(null);
   const fillRef = useRef<HTMLSpanElement>(null);
+  /* the ribbon: the spread a previous visit ended on, offered once on arrival */
+  const [place, setPlace] = useState(0);
+  /* a plate lifted off the page to be looked at properly */
+  const [plateView, setPlateView] = useState<PlateView | null>(null);
+  const plateDialog = useRef<HTMLDialogElement>(null);
 
   /** scroll to a spread — the only way the book is ever turned */
   const goSpread = useCallback((i: number) => {
@@ -82,6 +95,25 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
     const span = track.offsetHeight - window.innerHeight;
     window.scrollTo({ top: track.offsetTop + (span * stop) / stops, behavior: "smooth" });
   }, []);
+
+  /** step through the scroll stops — a whole opening on a desktop, one leaf on
+      a phone — which is what a hand turning the page means */
+  const goStop = useCallback((d: number) => {
+    const track = scrollRef.current;
+    if (!track) return;
+    const stops = STOPS[bookScroll.layout] - 1;
+    const span = track.offsetHeight - window.innerHeight;
+    const at = Math.max(0, Math.min(stops, Math.round(((window.scrollY - track.offsetTop) / span) * stops)));
+    const to = Math.max(0, Math.min(stops, at + d));
+    if (to === at) return;
+    window.scrollTo({ top: track.offsetTop + (span * to) / stops, behavior: "smooth" });
+  }, []);
+
+  /* the scene asks for turns through the store; the scroll lives out here */
+  useEffect(() => {
+    setTurner(goStop);
+    return () => setTurner(null);
+  }, [goStop]);
 
   /* ---- the landing sequence ----
           The lamp is lit inside the canvas (components/book/Intro.tsx); what
@@ -200,6 +232,7 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
     /* paint everything that follows the scroll: index, folio, progress rule.
        `q` is the position in scroll stops, which on a phone runs at two per
        opening — verso, recto, then the turn. */
+    let wasShut = true;
     const paint = (raw: number) => {
       if (barRef.current) barRef.current.style.transform = `scaleY(${raw})`;
 
@@ -214,6 +247,12 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
       const lift = Math.max(0, Math.min(1, q0));
       bookScroll.close = 1 - lift * lift * (3 - 2 * lift);
       const q = Math.max(0, q0 - 1);
+      /* the board knocks as it leaves the block and again as it lands on it */
+      const shut = bookScroll.close > 0.5;
+      if (shut !== wasShut) {
+        wasShut = shut;
+        if (!boot.active) thud(shut ? 1 : 0.6);
+      }
       /* the switches belong to the lamps, and the lamps belong to the shut
          book — both are gone by the time the covers are half up */
       if (lampsRef.current) {
@@ -238,10 +277,31 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
       wake();
 
       if (i === spreadRef.current) return;
+      /* a leaf went over — not on the first paint, and not for the covers */
+      if (spreadRef.current >= 0 && !boot.active && bookScroll.close < 0.5) rustle();
       spreadRef.current = i;
       setSpread(i);
+      if (i > 0) {
+        try {
+          localStorage.setItem(PLACE_KEY, SPREADS[i].id);
+        } catch {}
+      }
       for (const chip of navRef.current?.querySelectorAll<HTMLElement>("[data-spread]") ?? []) {
-        chip.dataset.on = String(chip.dataset.spread === SPREADS[i].id);
+        const on = chip.dataset.spread === SPREADS[i].id;
+        chip.dataset.on = String(on);
+        if (on) chip.setAttribute("aria-current", "location");
+        else chip.removeAttribute("aria-current");
+        /* on a phone the index is a strip that scrolls sideways, and the
+           chapter you are in can be off the end of it */
+        const strip = chip.closest("ol");
+        if (on && narrowNow && strip && strip.scrollWidth > strip.clientWidth) {
+          const a = chip.getBoundingClientRect();
+          const b = strip.getBoundingClientRect();
+          strip.scrollTo({
+            left: strip.scrollLeft + (a.left - b.left) - (strip.clientWidth - a.width) / 2,
+            behavior: bookScroll.reduced ? "auto" : "smooth",
+          });
+        }
       }
       if (folioRef.current) {
         folioRef.current.textContent = i === 0 ? "title page" : `${SPREADS[i].label} · fol. ${roman(i * 2)}`;
@@ -326,6 +386,9 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
         start: "top bottom",
         end: "top top",
         scrub: reduce.matches ? true : 0.5,
+        onUpdate: (self) => {
+          bookScroll.dive = self.progress;
+        },
       },
     });
 
@@ -371,7 +434,7 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
   /* ---- keyboard: one opening at a time ---- */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (boot.active) return;
+      if (boot.active || plateDialog.current?.open) return;
       if (expanded) {
         if (e.key === "Escape") setExpanded(false);
         return;
@@ -388,6 +451,111 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [goSpread, expanded]);
+
+  /* ---- turning by hand ----
+          A drag across the open book with a mouse, or a sideways swipe on a
+          phone, turns a leaf. Vertical is the scroll's, so only a gesture that
+          is clearly sideways counts, and one gesture turns one leaf. Touch is
+          read off touch events, not pointer events: the browser claims a
+          touch for panning and cancels the pointer stream as soon as it
+          moves, which is exactly when this needs to be listening. ---- */
+  useEffect(() => {
+    const CHROME = "a, button, input, textarea, dialog, .index, .tabs, .expand-overlay, .ribbon-tag";
+    const open = () =>
+      !boot.active && !expanded && bookScroll.close < 0.05 && bookScroll.dive < 0.05;
+    let x0 = NaN;
+    let y0 = 0;
+
+    const start = (x: number, y: number, target: EventTarget | null) => {
+      x0 = NaN;
+      if (!open() || bookScroll.corner) return;
+      if ((target as HTMLElement | null)?.closest?.(CHROME)) return;
+      x0 = x;
+      y0 = y;
+    };
+    const move = (x: number, y: number) => {
+      if (Number.isNaN(x0)) return;
+      const dx = x - x0;
+      const dy = y - y0;
+      if (Math.abs(dx) < 64 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+      x0 = NaN;
+      goStop(dx < 0 ? 1 : -1);
+    };
+
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === "touch" || e.button !== 0) return;
+      start(e.clientX, e.clientY, e.target);
+    };
+    const drag = (e: PointerEvent) => {
+      if (e.pointerType !== "touch") move(e.clientX, e.clientY);
+    };
+    const up = () => {
+      x0 = NaN;
+    };
+    const tStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (e.touches.length === 1 && t) start(t.clientX, t.clientY, e.target);
+      else x0 = NaN;
+    };
+    const tMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (t) move(t.clientX, t.clientY);
+    };
+
+    window.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", drag);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("touchstart", tStart, { passive: true });
+    window.addEventListener("touchmove", tMove, { passive: true });
+    window.addEventListener("touchend", up);
+    return () => {
+      window.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointermove", drag);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("touchstart", tStart);
+      window.removeEventListener("touchmove", tMove);
+      window.removeEventListener("touchend", up);
+    };
+  }, [goStop, expanded]);
+
+  /* ---- the ribbon ----
+          The shut book has a silk bookmark trailing out of it (book/Ribbon.tsx).
+          A returning reader finds a tag tied to its end naming the opening
+          they last had open. Offered once, on the shut book; the moment they open it
+          themselves — or follow it — it has done its job and goes. ---- */
+  useEffect(() => {
+    if (boots !== "off") return;
+    let id: string | null = null;
+    try {
+      id = localStorage.getItem(PLACE_KEY);
+    } catch {}
+    const at = SPREADS.findIndex((s) => s.id === id);
+    if (at > 0 && spreadRef.current <= 0 && bookScroll.close > 0.5) setPlace(at);
+  }, [boots]);
+  useEffect(() => {
+    if (!place) return;
+    const check = () => {
+      if (bookScroll.close < 0.5) setPlace(0);
+    };
+    window.addEventListener("scroll", check, { passive: true });
+    return () => window.removeEventListener("scroll", check);
+  }, [place]);
+
+  /* ---- a plate, lifted off the page ----
+          The engravings live inside the scene's CSS3D portal, a separate React
+          root, so they announce themselves with an event rather than a prop
+          threaded back out through the canvas. ---- */
+  useEffect(() => {
+    const onPlate = (e: Event) => setPlateView((e as CustomEvent<PlateView>).detail);
+    window.addEventListener("codex:plate", onPlate);
+    return () => window.removeEventListener("codex:plate", onPlate);
+  }, []);
+  useEffect(() => {
+    const d = plateDialog.current;
+    if (!d) return;
+    if (plateView && !d.open) d.showModal();
+    else if (!plateView && d.open) d.close();
+  }, [plateView]);
 
   /* every word of the book, flat, for search engines and screen readers —
      the CSS3D copy on the leaves only ever holds the open spread */
@@ -537,13 +705,28 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
       </section>
 
       <nav className="index" aria-label="Contents" ref={navRef}>
-        <span className="index-title">Contents</span>
+        <span className="index-title">
+          Contents
+          <span className="index-fleuron" aria-hidden="true">
+            ❧
+          </span>
+        </span>
         <ol>
           {SPREADS.map((s, i) => (
             <li key={s.id}>
-              <button type="button" data-spread={s.id} onClick={() => goSpread(i)}>
+              <button
+                type="button"
+                data-spread={s.id}
+                data-on={i === 0 ? "true" : "false"}
+                aria-label={`${s.label}, folio ${i === 0 ? "title" : roman(i * 2)}`}
+                onClick={() => goSpread(i)}
+              >
+                <span className="index-hand" aria-hidden="true">
+                  ☞
+                </span>
                 <span className="index-label">{s.label}</span>
-                <span className="index-folio">{roman(i * 2)}</span>
+                <span className="index-dots" aria-hidden="true" />
+                <span className="index-folio">{i === 0 ? "—" : roman(i * 2)}</span>
               </button>
             </li>
           ))}
@@ -603,6 +786,46 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
           </div>
         </div>
       )}
+
+      {/* The tag on the ribbon's end. Positioned by the scene, which knows
+          where the end of the silk is on screen; hidden until it has said. */}
+      {place > 0 && (
+        <div
+          className="ribbon-tag"
+          data-on="false"
+          ref={(el) => {
+            ribbonTag.el = el;
+            wake();
+          }}
+        >
+          <button type="button" onClick={() => goSpread(place)}>
+            <span className="ribbon-kicker">your place</span>
+            <span className="ribbon-where">
+              {SPREADS[place].label} <span aria-hidden="true">→</span>
+            </span>
+          </button>
+        </div>
+      )}
+
+      <dialog
+        className="plate-dialog"
+        ref={plateDialog}
+        aria-label={plateView?.caption ?? "Engraving"}
+        onClose={() => setPlateView(null)}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setPlateView(null);
+        }}
+      >
+        {plateView && (
+          <figure>
+            <img src={plateView.src} width={plateView.w} height={plateView.h} alt={plateView.alt} />
+            <figcaption>{plateView.caption}</figcaption>
+            <button type="button" className="expand-back" onClick={() => setPlateView(null)} autoFocus>
+              ← back to the book
+            </button>
+          </figure>
+        )}
+      </dialog>
 
       <div className="tabs" aria-label="Links">
         <a className="edge-tab" href={profile.resume} target="_blank" rel="noopener">

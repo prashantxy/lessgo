@@ -1941,33 +1941,71 @@ html:has(.codex[data-boot="on"]):not([data-room="day"]) {
    Chrome around the book — kept to the edges, set like an index
    ============================================================ */
 
+/* The contents, set the way a printer sets them: a leaf of the same paper as
+   the book, a double rule pricked round it, leaders running out to the folio,
+   and a manicule — the printer's pointing hand — at the chapter you are in. */
 .index {
+  --index-ink: #3a2c19;
   position: fixed;
   z-index: 20;
   top: 50%;
   left: clamp(0.9rem, 2.4vw, 2.2rem);
   transform: translateY(-50%);
+  width: 15.5rem;
   max-height: 86svh;
   overflow-y: auto;
   scrollbar-width: none;
-  padding: 0.9rem 1rem;
-  background: color-mix(in srgb, var(--paper) 72%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ink) 40%, transparent);
-  backdrop-filter: blur(2px);
+  padding: 1.15rem 1.25rem 1rem;
+  /* solid, not a blur over the canvas: a backdrop-filter re-blurs the whole
+     WebGL frame under it on every frame the scene draws */
+  background:
+    radial-gradient(120% 90% at 50% 40%, rgba(247, 238, 214, 0.9), rgba(214, 196, 158, 0.94)),
+    url("/parchment.jpg") center / cover,
+    #e4d7b8;
+  color: var(--index-ink);
+  box-shadow:
+    0 22px 48px rgba(0, 0, 0, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.35),
+    inset 0 0 26px rgba(120, 90, 50, 0.28);
+  border-radius: 2px;
+}
+/* the double rule, set in from the edge */
+.index::before,
+.index::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--index-ink) 42%, transparent);
+}
+.index::before {
+  inset: 6px;
+}
+.index::after {
+  inset: 9px;
+  border-color: color-mix(in srgb, var(--index-ink) 18%, transparent);
 }
 .index::-webkit-scrollbar {
   display: none;
 }
 .index-title {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   font-family: var(--font-hand);
   font-variant: small-caps;
-  letter-spacing: 0.2em;
-  font-size: 0.78rem;
-  color: var(--ink-faint);
-  padding-bottom: 0.45rem;
-  margin-bottom: 0.35rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  letter-spacing: 0.32em;
+  font-size: 1.02rem;
+  color: var(--index-ink);
+  padding: 0.1rem 0 0.4rem;
+  margin-bottom: 0.45rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--index-ink) 28%, transparent);
+}
+.index-fleuron {
+  font-size: 0.9rem;
+  letter-spacing: 0;
+  line-height: 1;
+  margin-top: 0.1rem;
+  color: var(--margin);
 }
 .index ol {
   list-style: none;
@@ -1976,35 +2014,82 @@ html:has(.codex[data-boot="on"]):not([data-room="day"]) {
   counter-reset: none;
 }
 .index button {
+  position: relative;
   display: flex;
   align-items: baseline;
-  gap: 1.2ch;
+  gap: 0.5ch;
   width: 100%;
-  /* a 40px row keeps the hit area honest at this type size */
-  padding: 0.42rem 0.2rem;
+  /* a 36px row keeps the hit area honest at this type size */
+  min-height: 2.25rem;
+  padding: 0.38rem 0.15rem 0.38rem 1.35rem;
   background: none;
   border: 0;
   cursor: pointer;
   font-family: var(--font-hand);
   font-size: 0.95rem;
   font-variant: small-caps;
-  letter-spacing: 0.08em;
-  color: var(--ink-2);
+  letter-spacing: 0.07em;
+  color: color-mix(in srgb, var(--index-ink) 82%, transparent);
   text-align: left;
+  transition: color 0.2s var(--ease);
 }
-.index button:hover {
-  color: var(--ink);
+.index-hand {
+  position: absolute;
+  left: 0.05rem;
+  top: 50%;
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--margin);
+  opacity: 0;
+  transform: translate(-6px, -54%);
+  transition:
+    opacity 0.25s var(--ease),
+    transform 0.25s var(--ease);
+}
+.index-label {
+  white-space: nowrap;
+}
+.index-dots {
+  flex: 1;
+  min-width: 1ch;
+  align-self: flex-end;
+  margin-bottom: 0.42em;
+  border-bottom: 1.5px dotted color-mix(in srgb, var(--index-ink) 34%, transparent);
+  transition: border-color 0.2s var(--ease);
+}
+.index-folio {
+  min-width: 2.2ch;
+  text-align: right;
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--index-ink) 55%, transparent);
+}
+@media (hover: hover) {
+  .index button:hover {
+    color: var(--index-ink);
+  }
+  .index button:hover .index-dots {
+    border-bottom-color: color-mix(in srgb, var(--index-ink) 60%, transparent);
+  }
+  .index button:hover .index-hand {
+    opacity: 0.35;
+    transform: translate(-2px, -54%);
+  }
 }
 .index button[data-on="true"] {
   color: var(--margin);
 }
-.index-label {
-  flex: 1;
+.index button[data-on="true"] .index-hand {
+  opacity: 1;
+  transform: translate(0, -54%);
 }
-.index-folio {
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  color: var(--ink-faint);
+.index button[data-on="true"] .index-dots {
+  border-bottom-color: color-mix(in srgb, var(--margin) 55%, transparent);
+}
+.index button[data-on="true"] .index-folio {
+  color: var(--margin);
 }
 
 /* how far through the quire you are */
@@ -2069,14 +2154,31 @@ html:has(.codex[data-boot="on"]):not([data-room="day"]) {
     bottom: 0;
     left: 0;
     right: 0;
+    width: auto;
     transform: none;
     max-height: none;
-    border-left: 0;
-    border-right: 0;
-    border-bottom: 0;
-    padding: 0.4rem 0.6rem;
+    border-radius: 0;
+    padding: 0.35rem 0.4rem calc(0.3rem + env(safe-area-inset-bottom));
+    box-shadow:
+      0 -10px 28px rgba(0, 0, 0, 0.45),
+      inset 0 0 20px rgba(120, 90, 50, 0.22);
   }
-  .index-title {
+  /* the double rule becomes a pair of lines along the top edge */
+  .index::before,
+  .index::after {
+    inset: auto 0;
+    height: 0;
+    border-width: 1px 0 0;
+  }
+  .index::before {
+    top: 4px;
+  }
+  .index::after {
+    top: 7px;
+  }
+  .index-title,
+  .index-hand,
+  .index-dots {
     display: none;
   }
   .index ol {
@@ -2091,7 +2193,24 @@ html:has(.codex[data-boot="on"]):not([data-room="day"]) {
   .index button {
     width: auto;
     white-space: nowrap;
-    padding: 0.55rem 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.6rem;
+    align-items: center;
+  }
+  /* the chapter you are in gets a rubric bar under it instead of the hand */
+  .index button::after {
+    content: "";
+    position: absolute;
+    left: 0.6rem;
+    right: 0.6rem;
+    bottom: 0.35rem;
+    height: 2px;
+    background: var(--margin);
+    transform: scaleX(0);
+    transition: transform 0.3s var(--ease);
+  }
+  .index button[data-on="true"]::after {
+    transform: scaleX(1);
   }
   .index-folio {
     display: none;
@@ -2398,7 +2517,7 @@ html:has(.codex) {
   }
   .expand-btn {
     top: auto;
-    bottom: 3.9rem;
+    bottom: calc(4.1rem + env(safe-area-inset-bottom));
     right: 0.7rem;
   }
 }
@@ -3051,5 +3170,261 @@ html:has(.gw-page) {
   }
   .gw-lightbox[open] {
     animation: none;
+  }
+}
+
+/* ======================================================================== */
+/* ---- the works: long accounts, and the flat list of them ---------------- */
+
+.study-lead {
+  font-size: 1.12rem;
+  line-height: 1.6;
+  color: var(--ink);
+  margin: -0.8rem 0 0.9rem;
+}
+.study-stack {
+  font-family: var(--font-hand);
+  font-style: italic;
+  color: var(--ink-faint);
+  font-size: 0.95rem;
+}
+.study-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin: 0.5rem 0 1.8rem;
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+}
+.study-links a {
+  color: var(--margin);
+}
+.works-list {
+  list-style: none;
+  padding: 0;
+  margin: 1.8rem 0 0;
+}
+.works-list > li {
+  padding: 1.4rem 0;
+  border-top: 1px solid var(--rule);
+}
+.works-list > li > p:not(.post-meta):not(.study-stack):not(.study-links) {
+  color: var(--ink-2);
+  line-height: 1.7;
+  margin-top: 0.5rem;
+}
+.works-list .study-links {
+  margin-bottom: 0;
+}
+.works-list h2 a {
+  color: inherit;
+  text-decoration-color: color-mix(in srgb, var(--margin) 45%, transparent);
+}
+
+/* a project's name on the leaf goes to its account; it should not shout */
+.folio-work h3 a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--margin) 40%, transparent);
+  text-underline-offset: 0.18em;
+}
+.folio-work h3 a:hover {
+  color: var(--margin);
+}
+
+/* ---- a plate you can lift off the page ---------------------------------- */
+
+button.engraving-mark {
+  font: inherit;
+  color: inherit;
+  background: none;
+  cursor: zoom-in;
+  transition:
+    box-shadow 0.2s var(--ease),
+    outline-color 0.2s var(--ease);
+}
+button.engraving-mark:hover {
+  outline-color: color-mix(in srgb, var(--margin) 45%, transparent);
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--ink) 16%, transparent);
+}
+
+.plate-dialog {
+  border: 0;
+  padding: 0;
+  margin: auto;
+  max-width: min(94vw, 1100px);
+  max-height: 92vh;
+  background: transparent;
+  overflow: visible;
+}
+.plate-dialog::backdrop {
+  background: rgba(20, 15, 9, 0.72);
+  backdrop-filter: blur(3px);
+}
+.plate-dialog[open] {
+  animation: overlay-in 0.22s var(--ease) both;
+}
+.plate-dialog figure {
+  margin: 0;
+  padding: clamp(0.9rem, 3vw, 1.8rem);
+  background: var(--paper-2) url("/parchment.jpg") center / cover;
+  box-shadow: var(--shadow-hard-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+.plate-dialog img {
+  display: block;
+  max-width: 100%;
+  max-height: 72vh;
+  width: auto;
+  height: auto;
+  mix-blend-mode: multiply;
+}
+.plate-dialog figcaption {
+  font-family: var(--font-hand);
+  font-style: italic;
+  color: var(--ink-2);
+  text-align: center;
+}
+
+/* ---- the tag on the bookmark ribbon's end -------------------------------- */
+
+/* A point on the screen — the end of the silk, projected by the scene
+   (book/Ribbon.tsx) — with a luggage-tag label tied to it by a short string. */
+.ribbon-tag {
+  position: fixed;
+  z-index: 21;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease);
+}
+.ribbon-tag[data-on="true"] {
+  opacity: 1;
+}
+/* the string */
+.ribbon-tag::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 26px;
+  height: 1px;
+  background: rgba(214, 196, 158, 0.7);
+  transform-origin: left center;
+  transform: rotate(-18deg);
+}
+.ribbon-tag button {
+  position: absolute;
+  left: 22px;
+  top: -30px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  padding: 0.38rem 0.8rem 0.42rem 1.25rem;
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+  color: var(--ink);
+  background: linear-gradient(170deg, #efe3c4, #dccb9f);
+  /* a card with its corners clipped, punched at the string end */
+  clip-path: polygon(0.6rem 0, 100% 0, 100% 100%, 0.6rem 100%, 0 70%, 0 30%);
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.45));
+  transform: rotate(-5deg);
+  transform-origin: left center;
+  transition: transform 0.25s var(--ease);
+  animation: tag-swing 5.5s ease-in-out infinite;
+}
+.ribbon-tag[data-on="true"] button {
+  pointer-events: auto;
+}
+/* the eyelet */
+.ribbon-tag button::before {
+  content: "";
+  position: absolute;
+  left: 0.42rem;
+  top: 50%;
+  width: 0.42rem;
+  height: 0.42rem;
+  margin-top: -0.21rem;
+  border-radius: 50%;
+  background: #2a1f14;
+  box-shadow: 0 0 0 1.5px #a8843f;
+}
+.ribbon-tag button:hover,
+.ribbon-tag button:focus-visible {
+  animation-play-state: paused;
+  transform: rotate(-1deg) translateY(-2px);
+}
+.ribbon-kicker {
+  font-family: var(--font-sans);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+  color: var(--ink-faint);
+}
+.ribbon-where {
+  font-family: var(--font-hand);
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  font-size: 0.92rem;
+  color: var(--margin);
+}
+@keyframes tag-swing {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(-2.5deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ribbon-tag button {
+    animation: none;
+  }
+}
+
+/* ---- phone: the links come back, as a row along the top ----------------- */
+
+@media (max-width: 900px) {
+  .tabs {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    top: calc(0.6rem + env(safe-area-inset-top));
+    left: 0.6rem;
+    right: auto;
+    /* one row above the lamp's switch, which sits a line lower */
+    max-width: calc(100% - 1.2rem);
+    transform: none;
+    gap: 0.25rem;
+  }
+  .tabs .edge-tab,
+  .tabs .edge-music {
+    writing-mode: horizontal-tb;
+    padding: 0.4rem 0.5rem;
+    min-height: 2.1rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .tabs .edge-tab:hover,
+  .tabs .edge-music:hover {
+    transform: none;
+  }
+  /* the strip scrolls sideways: fade its ends so it reads as more */
+  .index ol {
+    mask-image: linear-gradient(90deg, transparent 0, #000 1.2rem, #000 calc(100% - 1.6rem), transparent);
   }
 }

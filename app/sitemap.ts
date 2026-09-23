@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/content/site";
 import { getPosts } from "@/lib/blog";
+import { getStudySlugs } from "@/lib/works";
 
 /**
  * Nothing on the site links to a post from anywhere a crawler can follow with
@@ -30,6 +31,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    {
+      url: `${SITE}/works`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    ...getStudySlugs().map((slug) => ({
+      url: `${SITE}/works/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "yearly" as const,
+      priority: 0.7,
+    })),
     ...posts.map((p) => ({
       url: `${SITE}/writing/${p.slug}`,
       lastModified: new Date(p.date),

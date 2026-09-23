@@ -91,12 +91,25 @@ function Engraving({
   alt: string;
 }) {
   const [w, h] = PLATE_SIZE[plate];
+  const src = `/plates/${plate}.webp`;
   return (
     <figure className="engraving" data-plate={plate}>
-      <span className="engraving-mark">
+      {/* A button: at the size a leaf can hold it, a plate is a thumbnail of
+          itself, so it lifts off the page to be looked at. The shell hears
+          about it by event — this renders inside the scene's own portal. */}
+      <button
+        type="button"
+        className="engraving-mark"
+        aria-label={`Enlarge the plate: ${caption}`}
+        onClick={() =>
+          window.dispatchEvent(
+            new CustomEvent("codex:plate", { detail: { src, w, h, alt, caption } }),
+          )
+        }
+      >
         {/* a plain <img>: it lives inside a CSS3D portal, where next/image's wrapper and srcset buy nothing */}
-        <img src={`/plates/${plate}.webp`} width={w} height={h} alt={alt} loading="lazy" decoding="async" />
-      </span>
+        <img src={src} width={w} height={h} alt={alt} loading="lazy" decoding="async" />
+      </button>
       <figcaption>{caption}</figcaption>
     </figure>
   );
@@ -198,14 +211,15 @@ function ProjectEntry({ p }: { p: (typeof projects)[number] }) {
   return (
     <article className="folio-entry folio-work">
       <h3>
-        {p.name}
+        {p.study ? <a href={`/works/${p.study}`}>{p.name}</a> : p.name}
         <span className="folio-year">{p.year}</span>
       </h3>
       <span className="folio-org">{p.tag}</span>
       <p>{p.blurb}</p>
       <p className="folio-stack">{p.stack.join(" · ")}</p>
-      {p.links.length > 0 && (
+      {(p.links.length > 0 || p.study) && (
         <p className="folio-links">
+          {p.study && <a href={`/works/${p.study}`}>the account</a>}
           {p.links.map((l) => (
             <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer">
               {l.label}
@@ -348,6 +362,15 @@ export function buildSpreads(posts: PostMeta[]): SpreadContent[] {
                 github.com/prashantxy
               </a>
             </li>
+            {profile.links.x && (
+              <li>
+                <span>dispatches</span>
+                <span className="dots" aria-hidden="true" />
+                <a href={profile.links.x} target="_blank" rel="noopener noreferrer">
+                  x.com/{profile.links.x.split("/").pop()}
+                </a>
+              </li>
+            )}
             <li>
               <span>this house</span>
               <span className="dots" aria-hidden="true" />

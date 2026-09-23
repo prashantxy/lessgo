@@ -48,6 +48,62 @@ const TOWN_BACK = 1.5;
 /** the colour at the plate's top edge, for the sky past it (make-town.mjs SKY_TOP) */
 const SKY = new THREE.Color(70 / 255, 66 / 255, 92 / 255);
 
+/** the sky once it is dark: the dusk colour gone to deep blue */
+const NIGHT_SKY = new THREE.Color(0x121a2c);
+/** moonlight through the glass, instead of the warm evening coming in */
+const MOON = new THREE.Color(0x9fb3d6);
+const EVENING = new THREE.Color(0xffc98e);
+
+/**
+ * How far into the night it is where the reader is sitting: 0 in daylight and
+ * through the dusk the engraving is already inked for, 1 from nine at night
+ * until an hour before dawn. Their own clock, read once — a page left open
+ * past the hour does not need to follow it. `?hour=22` on the URL overrides
+ * it, so the night can be shown at noon.
+ */
+function nightness() {
+  let h = new Date().getHours() + new Date().getMinutes() / 60;
+  try {
+    const q = new URLSearchParams(window.location.search).get("hour");
+    if (q !== null && q.trim() !== "" && Number.isFinite(Number(q))) h = Number(q) % 24;
+  } catch {}
+  if (h >= 21 || h < 4) return 1;
+  if (h >= 18) return (h - 18) / 3;
+  if (h < 6) return 1 - (h - 4) / 2;
+  return 0;
+}
+
+/** a pale disc with a soft rim, for the moon */
+function moonTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const g = c.getContext("2d");
+  if (!g) return null;
+  const glow = g.createRadialGradient(64, 64, 14, 64, 64, 64);
+  glow.addColorStop(0, "rgba(236,236,220,0.5)");
+  glow.addColorStop(1, "rgba(236,236,220,0)");
+  g.fillStyle = glow;
+  g.fillRect(0, 0, 128, 128);
+  g.fillStyle = "#ecebd9";
+  g.beginPath();
+  g.arc(64, 64, 20, 0, Math.PI * 2);
+  g.fill();
+  /* a few maria, so it is the moon and not a lamp */
+  g.fillStyle = "rgba(160,160,150,0.35)";
+  for (const [x, y, r] of [
+    [58, 58, 6],
+    [70, 66, 5],
+    [62, 72, 3.5],
+  ]) {
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 /** the window's outline, in the wall's own xy — jambs and a round arch */
 function archPath<P extends THREE.Path>(path: P, w: number, jamb: number, inset = 0): P {
   const hw = w / 2 - inset;
@@ -348,6 +404,23 @@ export default function Window() {
     townMesh.position.set(-0.3, 0.08, -TOWN_BACK);
     group.add(townMesh);
 
+    /* The moon. Not out on the town plate: from the shut framing the camera
+       looks down through the glass, and the plate's sky is above the top of
+       the arch. So it hangs just behind the leading, in the upper right light
+       of the window, where the eye goes looking for it. */
+    const moonMat = new THREE.MeshBasicMaterial({
+      map: moonTexture() ?? undefined,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      fog: false,
+      toneMapped: false,
+    });
+    const moon = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.11), moonMat);
+    moon.position.set(0.12, JAMB_H * 0.95, -0.2);
+    moon.visible = false;
+    group.add(moon);
+
     /* ---- the evening coming in ---- */
     const shaftTex = shaftTexture();
     const shaftMat = new THREE.MeshBasicMaterial({
@@ -392,7 +465,7 @@ export default function Window() {
       (o as THREE.Mesh).raycast = noRaycast;
     });
 
-    return { group, townMat, skyMat, glassMat, shaftMat, dusk, lit: -1 };
+    return { group, townMat, skyMat, glassMat, shaftMat, dusk, moon, moonMat, night: nightness(), lit: -1 };
   }, [town, prints]);
 
   useEffect(() => {
@@ -422,11 +495,17 @@ export default function Window() {
     const lit = 0.42 + 0.58 * (boot.active ? boot.dawn : 1);
     if (Math.abs(lit - built.lit) < 1e-3) return;
     built.lit = lit;
-    built.townMat.color.setScalar(lit);
-    built.skyMat.color.copy(SKY).multiplyScalar(lit);
+    /* At night the town goes blue and dim — ink in moonlight — the evening
+       light stops coming in, and the moon is up. */
+    const n = built.night;
+    built.townMat.color.setRGB(lit * (1 - 0.8 * n), lit * (1 - 0.74 * n), lit * (1 - 0.5 * n));
+    built.skyMat.color.copy(SKY).lerp(NIGHT_SKY, n).multiplyScalar(lit);
     built.glassMat.opacity = 0.6 + 0.4 * lit;
-    built.shaftMat.opacity = 0.075 * lit;
-    built.dusk.intensity = 0.55 * lit;
+    built.shaftMat.opacity = 0.075 * lit * (1 - n);
+    built.dusk.color.copy(EVENING).lerp(MOON, n);
+    built.dusk.intensity = 0.55 * lit * (1 - 0.55 * n);
+    built.moon.visible = n > 0.3;
+    built.moonMat.opacity = Math.min(1, (n - 0.3) / 0.5) * lit;
   });
 
   return <primitive object={built.group} />;

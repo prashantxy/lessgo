@@ -25,10 +25,10 @@ export default function Home() {
     worksFor: { "@type": "Organization", name: work[0].org },
     knowsAbout: [...profile.focus, ...skills.flatMap((g) => g.items)],
     /* TODO(prashant): profile.links.linkedin and .codeforces are still empty,
-       so sameAs currently carries GitHub alone. Those two are the strongest
+       so sameAs currently carries GitHub and X alone. Those two are the strongest
        identity signals Google has for an engineer — filling them in here is
        the single highest-value edit left in this file. */
-    sameAs: [profile.links.github, profile.links.linkedin, profile.links.codeforces].filter(Boolean),
+    sameAs: [profile.links.github, profile.links.x, profile.links.linkedin, profile.links.codeforces].filter(Boolean),
   };
 
   const website = {

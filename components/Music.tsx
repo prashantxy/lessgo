@@ -1,11 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { audio, sound } from "./sound";
 
 /**
  * A quiet ambient pad, synthesised in the browser (no audio file, no
  * copyright). Three detuned voices through a low-pass with a slow tremolo.
  * Off by default; only ever starts on a user click.
+ *
+ * The same switch lets the book make its own noise — the paper as a leaf
+ * turns, the board landing (see sound.ts). One tab for all of it: a reader
+ * who wants the room quiet wants the pages quiet too.
  */
 export default function Music() {
   const [on, setOn] = useState(false);
@@ -20,6 +25,7 @@ export default function Music() {
     const r = ref.current;
     if (!r) return;
     ref.current = null;
+    sound.on = false;
     r.master.gain.cancelScheduledValues(r.ctx.currentTime);
     r.master.gain.linearRampToValueAtTime(0.0001, r.ctx.currentTime + 0.6);
     setTimeout(() => {
@@ -31,15 +37,12 @@ export default function Music() {
       try {
         r.lfo.stop();
       } catch {}
-      r.ctx.close();
+      /* the context is shared with the paper, and stays open for next time */
     }, 700);
   }, []);
 
   const start = useCallback(() => {
-    const Ctx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
+    const ctx = audio();
 
     const master = ctx.createGain();
     master.gain.value = 0.0001;
@@ -74,6 +77,7 @@ export default function Music() {
 
     master.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 2.5);
     ref.current = { ctx, master, nodes, lfo };
+    sound.on = true;
   }, []);
 
   /* Side effects stay out of the state updater: React may call an updater
@@ -94,15 +98,15 @@ export default function Music() {
       data-on={on}
       onClick={toggle}
       aria-pressed={on}
-      aria-label={on ? "Mute ambient music" : "Play ambient music"}
-      title={on ? "mute" : "ambient music"}
+      aria-label={on ? "Mute the room" : "Play ambient music and page sounds"}
+      title={on ? "mute" : "ambient music & page sounds"}
     >
       <span className="eq" aria-hidden="true">
         <i />
         <i />
         <i />
       </span>
-      <span className="edge-music-label">{on ? "playing" : "music"}</span>
+      <span className="edge-music-label">{on ? "playing" : "sound"}</span>
     </button>
   );
 }

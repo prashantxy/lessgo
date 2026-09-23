@@ -54,6 +54,16 @@ export const bookScroll = {
   pageFocus: 0,
   /** 1 shut on the desk, 0 lying open. */
   close: 1,
+  /**
+   * A hand at a page corner: -1 lifts the leaf on the left back toward you,
+   * +1 the one on the right. Only a hint of a turn — the scroll still owns
+   * the real thing. Written by the corner hover in BookScene.
+   */
+  peek: 0,
+  /** which corner the pointer is on, so a drag starting there is left to it */
+  corner: 0,
+  /** how far into the dive plate the scroll is, 0..1 */
+  dive: 0,
   layout: "wide" as Layout,
   /**
    * Whether there is room across the frame for the desk around the book — the
@@ -79,6 +89,21 @@ export function setInvalidate(fn: (() => void) | null) {
 
 export function wake() {
   invalidate?.();
+}
+
+/* --- turning by hand -------------------------------------------------------
+   The scroll is the only thing that turns the book; a click on a page corner
+   or a swipe across it asks the DOM shell to scroll there. The shell owns the
+   scroll, so it registers the function and the scene only ever calls it. */
+
+let turner: ((delta: number) => void) | null = null;
+
+export function setTurner(fn: ((delta: number) => void) | null) {
+  turner = fn;
+}
+
+export function turnBy(delta: number) {
+  turner?.(delta);
 }
 
 /* --- spread subscription ---------------------------------------------------
