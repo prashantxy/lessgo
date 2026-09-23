@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
+import { gallery, type GalleryItem } from "@/content/gallery";
 import { boot } from "./boot";
 import { bookScroll } from "./state";
 
@@ -174,8 +175,63 @@ function shaftTexture() {
 
 const noRaycast = () => null;
 
+/**
+ * The prints from /gallery that also hang in the room, in the wall's own
+ * coordinates (x from the window's centre line, y from the sill). Kept clear
+ * of the stone surround, which runs to ±0.305.
+ */
+const HANG: Record<NonNullable<GalleryItem["onWall"]>, { x: number; y: number; w: number; tilt: number }> = {
+  /* hung below the top of the landing frame, which crops at about 0.44 */
+  "right-high": { x: 0.58, y: 0.27, w: 0.2, tilt: -0.02 },
+  "right-low": { x: 0.56, y: 0.05, w: 0.1, tilt: 0.03 },
+  left: { x: -0.56, y: 0.25, w: 0.2, tilt: 0.015 },
+};
+const WALL_PRINTS = gallery.filter((g) => g.onWall);
+
+/**
+ * One framed print: a moulding, a cream mat inside it, the albumen print
+ * inside that, and the brass nail it hangs from. Lit and fogged like the rest
+ * of the room — these are things on a wall, not light sources.
+ */
+function framedPrint(
+  map: THREE.Texture,
+  aspect: number,
+  at: { x: number; y: number; w: number; tilt: number },
+  moulding: THREE.Material,
+  mat: THREE.Material,
+  nail: THREE.Material,
+) {
+  const g = new THREE.Group();
+  const w = at.w;
+  const h = w / aspect;
+  const M = w * 0.09; /* mat */
+  const F = Math.max(0.012, w * 0.07); /* moulding */
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 2 * (M + F), h + 2 * (M + F), 0.014), moulding);
+  frame.position.z = 0.007;
+  frame.castShadow = true;
+  frame.receiveShadow = true;
+  const matMesh = new THREE.Mesh(new THREE.PlaneGeometry(w + 2 * M, h + 2 * M), mat);
+  matMesh.position.z = 0.0145;
+  matMesh.receiveShadow = true;
+  const print = new THREE.Mesh(
+    new THREE.PlaneGeometry(w, h),
+    new THREE.MeshStandardMaterial({ map, roughness: 0.62, metalness: 0 }),
+  );
+  print.position.z = 0.015;
+  print.receiveShadow = true;
+  g.add(frame, matMesh, print);
+  /* the nail, a little above the frame's top edge — the wire is behind it */
+  const n = new THREE.Mesh(new THREE.SphereGeometry(0.0045, 12, 8), nail);
+  n.position.set(0, h / 2 + M + F + 0.03, 0.004);
+  g.add(n);
+  g.position.set(at.x, at.y, 0);
+  g.rotation.z = at.tilt;
+  return g;
+}
+
 export default function Window() {
   const town = useTexture("/town-heidelberg-1620.jpg");
+  const prints = useTexture(WALL_PRINTS.map((g) => `/gallery/${g.id}-print.jpg`));
 
   const built = useMemo(() => {
     town.colorSpace = THREE.SRGBColorSpace;
@@ -320,12 +376,24 @@ export default function Window() {
     dusk.userData.boot = true;
     group.add(dusk, dusk.target);
 
+    /* ---- the prints on the wall either side of it (see content/gallery.ts) ---- */
+    const gilt = new THREE.MeshStandardMaterial({ color: 0xa8843f, metalness: 0.75, roughness: 0.42 });
+    const walnut = new THREE.MeshStandardMaterial({ color: 0x3e2614, metalness: 0, roughness: 0.58 });
+    const matCream = new THREE.MeshStandardMaterial({ color: 0xd9ccae, roughness: 0.9 });
+    const nailMat = new THREE.MeshStandardMaterial({ color: 0x9a7433, metalness: 0.8, roughness: 0.4 });
+    WALL_PRINTS.forEach((g, i) => {
+      const tex = prints[i];
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      group.add(framedPrint(tex, g.width / g.height, HANG[g.onWall!], i % 2 ? walnut : gilt, matCream, nailMat));
+    });
+
     group.traverse((o) => {
       (o as THREE.Mesh).raycast = noRaycast;
     });
 
     return { group, townMat, skyMat, glassMat, shaftMat, dusk, lit: -1 };
-  }, [town]);
+  }, [town, prints]);
 
   useEffect(() => {
     const { group } = built;

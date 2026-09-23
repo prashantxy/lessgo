@@ -614,6 +614,9 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
         <a className="edge-tab" href={`mailto:${profile.email}`}>
           email
         </a>
+        <a className="edge-tab" href="/gallery">
+          gallery
+        </a>
         <Music />
       </div>
 

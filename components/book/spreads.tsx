@@ -18,29 +18,8 @@ import type { ReactNode } from "react";
 
 /* ------------------------------------------------------------ scribal bits */
 
-const ROMAN: [number, string][] = [
-  [100, "c"],
-  [90, "xc"],
-  [50, "l"],
-  [40, "xl"],
-  [10, "x"],
-  [9, "ix"],
-  [5, "v"],
-  [4, "iv"],
-  [1, "i"],
-];
-
-export function roman(n: number) {
-  let out = "";
-  let rest = n;
-  for (const [value, numeral] of ROMAN) {
-    while (rest >= value) {
-      out += numeral;
-      rest -= value;
-    }
-  }
-  return out;
-}
+export { roman } from "@/lib/roman";
+import { roman } from "@/lib/roman";
 
 /**
  * One page of the codex. `side` decides which edge the folio number and the
@@ -407,6 +386,9 @@ export function buildSpreads(posts: PostMeta[]): SpreadContent[] {
           <p className="folio-prose">
             The town through the study window, and every plate in these leaves, is Heidelberg as
             Matthäus Merian engraved it in 1620 — public domain, re-inked for dusk.
+          </p>
+          <p className="folio-note">
+            <a href="/gallery">the cabinet of likenesses →</a>
           </p>
           <p className="folio-note">
             {profile.alias} · the laboratory · {new Date().getFullYear()}

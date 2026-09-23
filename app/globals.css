@@ -2167,6 +2167,10 @@ html:has(.codex[data-boot="on"]):not([data-room="day"]) {
 .tabs .edge-tab:nth-child(3) {
   background: #3f5d86;
 }
+/* the cabinet: green baize, like the inside of a collector's drawer */
+.tabs .edge-tab:nth-child(4) {
+  background: #3f6149;
+}
 .tabs .edge-music {
   background: var(--margin);
   color: var(--paper-2);
@@ -2660,4 +2664,392 @@ body::after {
     url("/parchment.jpg");
   background-size: cover;
   background-position: center;
+}
+
+/* ============================================================
+   The Cabinet — /gallery
+   The study wall from the 3D scene, as a page: warm lime plaster lit from
+   above by the lamp, prints hung salon-style on wires from brass nails,
+   each with an engraved brass plate. Prints are toned sepia like albumen
+   and come up to their true colour when you reach for one.
+   ============================================================ */
+
+html:has(.gw-page) {
+  background: #1f1710;
+}
+
+.gw-page {
+  --wall: #2b2119;
+  --wall-2: #1d1610;
+  --brass: #b58c47;
+  --gw-ink: #efe2c4;
+  --gw-ink-2: #c9b48d;
+  min-height: 100vh;
+  color: var(--gw-ink);
+  background-color: var(--wall);
+  background-image:
+    /* the lamp's pool, high on the wall */
+    radial-gradient(70% 45% at 50% 0%, rgba(255, 196, 120, 0.2), transparent 70%),
+    /* limewash, uneven */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.02' numOctaves='3' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.42 0 0 0 0 0.3 0 0 0 0.16 0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(var(--wall), var(--wall-2));
+  padding: clamp(2rem, 6vh, 4rem) clamp(1rem, 4vw, 3rem) 4rem;
+}
+
+.gw-head {
+  max-width: 46rem;
+  margin: 0 auto clamp(3rem, 8vh, 5rem);
+  text-align: center;
+}
+.gw-back {
+  font-family: var(--font-hand);
+  color: var(--gw-ink-2);
+  text-decoration: none;
+  font-size: 1rem;
+}
+.gw-back:hover,
+.gw-back:focus-visible {
+  color: var(--gw-ink);
+}
+.gw-kicker {
+  margin: 2.2rem 0 0.2rem;
+  font-family: var(--font-hand);
+  font-style: italic;
+  letter-spacing: 0.12em;
+  color: var(--brass);
+}
+.gw-title {
+  margin: 0;
+  color: var(--gw-ink);
+  font-family: var(--font-hand);
+  font-weight: 400;
+  font-size: clamp(2.6rem, 2rem + 3vw, 4.4rem);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5);
+}
+.gw-lead {
+  margin: 1.1rem auto 0;
+  max-width: 34rem;
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: var(--gw-ink-2);
+}
+
+/* ---- the hang ---- */
+.gw-wall {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 76rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(3.5rem, 7vh, 5.5rem) clamp(1.6rem, 3.6vw, 3.4rem);
+}
+.gw-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--drop, 0);
+}
+.gw-item[data-hang="grand"] {
+  width: min(44%, 560px);
+}
+.gw-item[data-hang="wide"] {
+  width: min(34%, 440px);
+}
+.gw-item[data-hang="tall"] {
+  width: min(22%, 280px);
+}
+.gw-item[data-hang="small"] {
+  width: min(20%, 250px);
+}
+@media (max-width: 760px) {
+  .gw-item[data-hang="grand"],
+  .gw-item[data-hang="wide"] {
+    width: 100%;
+  }
+  .gw-item[data-hang="tall"],
+  .gw-item[data-hang="small"] {
+    width: calc(50% - 1rem);
+  }
+}
+
+/* ---- a frame on its wire ---- */
+.gw-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: zoom-in;
+  transform: rotate(var(--tilt, 0deg));
+  transform-origin: 50% -30px;
+  transition: transform 0.5s var(--ease, ease);
+}
+.gw-frame:hover,
+.gw-frame:focus-visible {
+  transform: rotate(0deg) translateY(-4px);
+}
+.gw-frame:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 10px;
+}
+.gw-wire {
+  position: absolute;
+  left: 18%;
+  width: 64%;
+  bottom: 100%;
+  height: 34px;
+  overflow: visible;
+}
+.gw-wire path {
+  fill: none;
+  stroke: rgba(200, 176, 130, 0.55);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+.gw-nail {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 29px);
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f3dca0, #9a7433 55%, #4a3414);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* the moulding, per joiner */
+.gw-moulding {
+  display: block;
+  padding: clamp(9px, 1.2vw, 15px);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 3px rgba(255, 230, 170, 0.12),
+    0 26px 38px -14px rgba(0, 0, 0, 0.75),
+    0 6px 12px rgba(0, 0, 0, 0.45);
+  transition: box-shadow 0.5s var(--ease, ease);
+}
+.gw-frame:hover .gw-moulding {
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 3px rgba(255, 230, 170, 0.12),
+    0 36px 48px -14px rgba(0, 0, 0, 0.8),
+    0 10px 18px rgba(0, 0, 0, 0.45);
+}
+[data-frame="walnut"] .gw-moulding {
+  background: linear-gradient(135deg, #6b4524, #3f2713 22%, #8b5e33 48%, #3a2311 74%, #6a4322);
+}
+[data-frame="gilt"] .gw-moulding {
+  background: linear-gradient(135deg, #7b5a22, #e2c170 18%, #8e6824 38%, #f1d98f 55%, #6f4f1c 78%, #caa257);
+}
+[data-frame="ebony"] .gw-moulding {
+  background: linear-gradient(135deg, #2b231d, #0f0b08 30%, #3a3029 52%, #120d0a 80%, #2a211b);
+}
+
+/* the passe-partout, with its bevelled window */
+.gw-mat {
+  display: block;
+  padding: clamp(8px, 1.6vw, 18px);
+  background: #ece2cc;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25), inset 0 2px 6px rgba(0, 0, 0, 0.28);
+}
+.gw-print {
+  display: block;
+  width: 100%;
+  height: auto;
+  box-shadow: 0 0 0 1px rgba(60, 40, 20, 0.35);
+  /* albumen: sepia, a little flat, a little warm */
+  filter: sepia(0.82) saturate(0.85) contrast(0.96) brightness(0.97);
+  transition: filter 0.7s var(--ease, ease);
+}
+.gw-frame:hover .gw-print,
+.gw-frame:focus-visible .gw-print {
+  filter: none;
+}
+
+/* ---- the brass plate ---- */
+.gw-plate {
+  margin: 1.1rem 0 0;
+  padding: 0.4rem 0.95rem 0.45rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  max-width: 100%;
+  text-align: center;
+  color: #2c1e0c;
+  background: linear-gradient(170deg, #caa25a, #efd59a 40%, #b98f45 70%, #d9b56e);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 0 0 1px rgba(80, 55, 20, 0.5),
+    inset 0 1px 0 rgba(255, 245, 210, 0.6),
+    0 3px 6px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.45);
+}
+.gw-plate-title {
+  font-family: var(--font-hand);
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+.gw-plate-meta {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  font-variant: small-caps;
+  opacity: 0.8;
+}
+
+.gw-foot {
+  max-width: 40rem;
+  margin: clamp(4rem, 10vh, 6rem) auto 0;
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--gw-ink-2);
+}
+.gw-foot p {
+  margin: 0 0 1.2rem;
+}
+
+/* ---- taking one down: the lightbox ---- */
+.gw-lightbox {
+  width: min(1180px, 94vw);
+  max-width: none;
+  max-height: 94vh;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gw-ink, #efe2c4);
+  overflow: visible;
+}
+.gw-lightbox::backdrop {
+  background: rgba(10, 7, 4, 0.88);
+  backdrop-filter: blur(3px);
+}
+.gw-lightbox[open] {
+  animation: gw-in 0.45s var(--ease, ease) both;
+}
+@keyframes gw-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+.gw-lb {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(16rem, 1fr);
+  gap: clamp(1.2rem, 3vw, 2.4rem);
+  align-items: center;
+}
+.gw-lb-figure {
+  margin: 0;
+}
+.gw-lb-figure .gw-moulding {
+  background: linear-gradient(135deg, #7b5a22, #e2c170 18%, #8e6824 38%, #f1d98f 55%, #6f4f1c 78%, #caa257);
+}
+.gw-lb-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 72vh;
+  object-fit: contain;
+}
+.gw-lb-card {
+  padding: clamp(1.2rem, 2.4vw, 1.8rem);
+  color: var(--ink);
+  background: var(--paper-2) url("/parchment.jpg") center / cover;
+  border-radius: 2px;
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.7);
+}
+.gw-lb-count {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  font-variant: small-caps;
+  color: var(--ink-faint);
+}
+.gw-lb-title {
+  margin: 0.3rem 0 0;
+  font-family: var(--font-hand);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+  line-height: 1.15;
+}
+.gw-lb-meta {
+  margin: 0.25rem 0 0;
+  font-style: italic;
+  color: var(--ink-2);
+}
+.gw-lb-story {
+  margin: 1rem 0 0;
+  line-height: 1.6;
+}
+.gw-lb-links {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+.gw-lb-links a,
+.gw-lb-credit a {
+  color: var(--margin);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+.gw-lb-credit {
+  margin: 1.1rem 0 0;
+  padding-top: 0.7rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 20%, transparent);
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+}
+.gw-lb-nav {
+  margin-top: 1.2rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.gw-lb-nav button {
+  font-family: var(--font-hand);
+  font-size: 0.95rem;
+  padding: 0.35rem 0.8rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 35%, transparent);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.gw-lb-nav button:hover,
+.gw-lb-nav button:focus-visible {
+  background: var(--paper);
+  border-color: var(--ink);
+}
+@media (max-width: 900px) {
+  .gw-lb {
+    grid-template-columns: 1fr;
+    max-height: 94vh;
+    overflow-y: auto;
+  }
+  .gw-lb-img {
+    max-height: 48vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gw-frame,
+  .gw-print,
+  .gw-moulding {
+    transition: none;
+  }
+  .gw-lightbox[open] {
+    animation: none;
+  }
 }
