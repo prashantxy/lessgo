@@ -3346,6 +3346,15 @@ button.engraving-mark:hover {
 .ribbon-tag[data-on="true"] button {
   pointer-events: auto;
 }
+.ribbon-tag[data-flip="true"]::before {
+  transform: rotate(198deg);
+}
+.ribbon-tag[data-flip="true"] button {
+  left: auto;
+  right: 22px;
+  top: -4px;
+  transform-origin: right center;
+}
 /* the eyelet */
 .ribbon-tag button::before {
   content: "";

@@ -26,7 +26,7 @@ import { bookScroll } from "./state";
  */
 
 /** across the board, toward the fore-edge side */
-const X = 0.212;
+const X = 0.226;
 const WIDTH = 0.0105;
 /** how far back into the swallowtail's notch the middle of the end is cut */
 const NOTCH = 0.008;
@@ -38,11 +38,13 @@ const PATH = [
   /* over the tail, and down past the back board's edge */
   [X + 0.0008, 0.0175, 0.155],
   [X + 0.002, 0.0105, 0.161],
-  /* lying on the pad, drifting off to the right the way silk falls */
-  [X + 0.005, 0.0068, 0.169],
-  [X + 0.014, 0.0067, 0.184],
-  [X + 0.03, 0.0067, 0.196],
-  [X + 0.052, 0.0067, 0.203],
+  /* lying on the pad, curling back in toward the middle of the book — on a
+     phone the frame is barely wider than the board, and silk that fell
+     outward would take its tag off the edge of the screen */
+  [X + 0.004, 0.0068, 0.169],
+  [X - 0.004, 0.0067, 0.184],
+  [X - 0.02, 0.0067, 0.195],
+  [X - 0.044, 0.0067, 0.201],
 ].map(([x, y, z]) => new THREE.Vector3(x, y, z));
 
 function buildRibbon() {
@@ -146,6 +148,9 @@ export default function Ribbon() {
     at.x = x;
     at.y = y;
     el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    /* too near the right edge for the tag to hang to the right: hang it left */
+    const flip = x > size.left + size.width - 200 ? "true" : "false";
+    if (el.dataset.flip !== flip) el.dataset.flip = flip;
   });
 
   return <primitive object={ribbon.mesh} />;
