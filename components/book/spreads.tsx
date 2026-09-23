@@ -88,6 +88,41 @@ function Rubric({ text }: { text: string }) {
   );
 }
 
+/**
+ * An engraved plate, printed on the leaf. Cut from Merian's view of
+ * Heidelberg (1620) — the town outside the study window — and keyed to ink
+ * only, so it lies on the parchment rather than on a white card
+ * (scripts/make-plates.mjs). Lazy: the flat reader copy renders every spread,
+ * and none of it should fetch a plate nobody is looking at.
+ */
+const PLATE_SIZE = {
+  town: [720, 274],
+  castle: [600, 345],
+  bridge: [600, 279],
+  panorama: [1000, 342],
+} as const;
+
+function Engraving({
+  plate,
+  caption,
+  alt,
+}: {
+  plate: keyof typeof PLATE_SIZE;
+  caption: string;
+  alt: string;
+}) {
+  const [w, h] = PLATE_SIZE[plate];
+  return (
+    <figure className="engraving" data-plate={plate}>
+      <span className="engraving-mark">
+        {/* a plain <img>: it lives inside a CSS3D portal, where next/image's wrapper and srcset buy nothing */}
+        <img src={`/plates/${plate}.webp`} width={w} height={h} alt={alt} loading="lazy" decoding="async" />
+      </span>
+      <figcaption>{caption}</figcaption>
+    </figure>
+  );
+}
+
 /* ------------------------------------------------------------------- pages */
 
 function TitlePage() {
@@ -154,6 +189,11 @@ function NowPage() {
       <p className="folio-note">
         {profile.status}. Reachable at <span className="rubric">{profile.email}</span>.
       </p>
+      <Engraving
+        plate="town"
+        alt="Engraving of the old town of Heidelberg on the Neckar, with its church spires and rooftops"
+        caption="Prospect of the town from the study window"
+      />
     </Leaf>
   );
 }
@@ -272,6 +312,11 @@ export function buildSpreads(posts: PostMeta[]): SpreadContent[] {
       recto: (
         <Leaf side="recto" folio={11} catchword="Of">
           <SkillGroups groups={skills.slice(5)} />
+          <Engraving
+            plate="castle"
+            alt="Engraving of Heidelberg Castle on its wooded hillside, with towers and terraced gardens"
+            caption="The workshop upon the hill"
+          />
         </Leaf>
       ),
     },
@@ -339,6 +384,11 @@ export function buildSpreads(posts: PostMeta[]): SpreadContent[] {
               </a>
             </li>
           </ul>
+          <Engraving
+            plate="bridge"
+            alt="Engraving of the old covered bridge and its gate tower over the river Neckar"
+            caption="Whence letters go out — the old bridge"
+          />
         </Leaf>
       ),
       recto: (
@@ -354,6 +404,10 @@ export function buildSpreads(posts: PostMeta[]): SpreadContent[] {
             Hand-bound with Next.js and three.js. Set in Fell&rsquo;s English and Garamond. The
             binding is a 17th-century octavo; the leaves turn as you read down the page.
           </p>
+          <p className="folio-prose">
+            The town through the study window, and every plate in these leaves, is Heidelberg as
+            Matthäus Merian engraved it in 1620 — public domain, re-inked for dusk.
+          </p>
           <p className="folio-note">
             {profile.alias} · the laboratory · {new Date().getFullYear()}
           </p>
@@ -362,6 +416,11 @@ export function buildSpreads(posts: PostMeta[]): SpreadContent[] {
       recto: (
         <div className="page" data-side="recto">
           <div className="title-page">
+            <Engraving
+              plate="panorama"
+              alt="Matthäus Merian's 1620 panorama of Heidelberg: the castle, the old town and the river Neckar beneath wooded hills"
+              caption="Heidelberga · M. Merian fecit, 1620"
+            />
             <span className="title-device" aria-hidden="true">
               ❦
             </span>

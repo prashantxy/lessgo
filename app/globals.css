@@ -978,6 +978,7 @@ a:hover {
   font-family: var(--font-hand);
 }
 
+/* ============================================================
    Writing pages (standalone routes)
    ============================================================ */
 
@@ -997,6 +998,29 @@ a:hover {
   box-shadow: var(--shadow-hard);
   padding: clamp(2rem, 5vw, 3.5rem);
 }
+/* the engraved headpiece over each loose sheet (components/SheetPlate.tsx) */
+.sheet-plate {
+  margin: 0 0 1.4rem;
+  text-align: center;
+}
+.sheet-plate img {
+  display: block;
+  width: 100%;
+  height: auto;
+  opacity: 0.82;
+  /* a vignette, not a crop: the plate fades into the desk at both ends */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+}
+.sheet-plate figcaption {
+  margin-top: 0.35rem;
+  font-family: var(--font-hand);
+  font-style: italic;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+
 .back-link {
   display: inline-block;
   font-family: var(--font-hand);
@@ -1601,6 +1625,49 @@ html:has(.codex[data-boot="on"]):not([data-room="day"]) {
   font-style: italic;
   color: var(--ink-2);
   max-width: none;
+}
+
+/* ---- engraved plates ------------------------------------------------------
+   Printed on the leaf, not pasted onto it: the image is ink with the paper
+   keyed out (scripts/make-plates.mjs), and the plate mark — the bevelled
+   dent a copper plate leaves pressed into the sheet — is two hairlines and
+   a faint inner shade. Capped in height because a leaf clips what it cannot
+   hold, and a plate is the one thing on it that can give way. */
+.engraving {
+  margin: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.engraving-mark {
+  display: block;
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--ink) 34%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  outline-offset: 3px;
+  box-shadow: inset 0 0 14px color-mix(in srgb, var(--ink) 10%, transparent);
+  max-width: 100%;
+}
+.engraving img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 128px;
+  /* ink sits into the paper a touch, like it was pressed there */
+  opacity: 0.9;
+}
+.engraving[data-plate="panorama"] img {
+  max-height: 150px;
+}
+.engraving figcaption {
+  font-family: var(--font-hand);
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+  text-align: center;
 }
 
 .folio-list {

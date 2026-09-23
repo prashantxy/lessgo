@@ -19,7 +19,12 @@ const nextConfig: NextConfig = {
          arrived; a returning reader should never fetch it twice. Rename the
          file if it is ever re-exported — that is the cache-bust. */
       {
-        source: "/:file(ancient_book\\.web\\.glb|parchment\\.jpg)",
+        source: "/:file(ancient_book\\.web\\.glb|parchment\\.jpg|town-heidelberg-1620\\.jpg)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      /* the engraved plates — same rule: re-bake under a new name to bust */
+      {
+        source: "/plates/:file*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
     ];

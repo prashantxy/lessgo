@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import SheetPlate from "@/components/SheetPlate";
 import { getPosts } from "@/lib/blog";
 import { formatDate } from "@/lib/format";
 
@@ -21,6 +22,7 @@ export default function NotFound() {
       <Link href="/" className="back-link">
         ← back to the notebook
       </Link>
+      <SheetPlate />
       <div className="sheet">
         <p className="post-meta">fol. non est</p>
         <h1 className="h-lg">No such leaf</h1>

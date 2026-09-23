@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { bookScroll } from "./state";
+import { WALL_Z } from "./Window";
 
 /**
  * The desk the book lies on.
@@ -74,6 +75,8 @@ function grainTexture() {
   return tex;
 }
 
+const DESK_DEPTH = 7;
+
 export default function Desk() {
   const map = useMemo(grainTexture, []);
   const fog = useRef<THREE.Fog>(null);
@@ -102,14 +105,17 @@ export default function Desk() {
           never touched by fog — only the desk running away from it. */}
       <fog attach="fog" ref={fog} args={["#17120c", 0.62, 2.6]} />
 
+      {/* It stops at the study wall: through the window the ground has to be
+          the town's, and a desk running on under the sill was what the lower
+          panes were looking at. Seven metres forward is past any framing. */}
       <mesh
-        position={[0, -0.0045, 0]}
+        position={[0, -0.0045, WALL_Z + DESK_DEPTH / 2]}
         rotation={[-Math.PI / 2, 0, 0]}
         receiveShadow
         /* the desk is scenery: it must never swallow a click meant for a page */
         raycast={() => null}
       >
-        <planeGeometry args={[14, 14]} />
+        <planeGeometry args={[14, DESK_DEPTH]} />
         <meshStandardMaterial map={map ?? undefined} color="#6b5335" roughness={0.78} metalness={0} />
       </mesh>
     </>

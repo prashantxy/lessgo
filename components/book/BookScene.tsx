@@ -7,6 +7,7 @@ import * as THREE from "three";
 import type { PostMeta } from "@/lib/format";
 import Desk from "./Desk";
 import Intro from "./Intro";
+import Window from "./Window";
 import Essentials, { DESK_FRAME } from "./Essentials";
 import Lamps, { LAMP_BACK, LAMP_TOP } from "./Lamps";
 import { boot } from "./boot";
@@ -44,7 +45,10 @@ const MARKS: Mark[] = [
      than it reads, because this mark now frames a whole desk rather than a
      board — from 46° you are looking at the top of everything on it, and a mug
      and an inkwell seen from above are two circles. */
-  { at: 0.0, dist: 1.04, el: 38, yaw: -13 },
+  /* …and lower again since the study got a window: at 38° the wall behind
+     the desk was entirely out of shot. From here the frame looks across the
+     desk to the town, and the first scroll cranes up off it onto the page. */
+  { at: 0.0, dist: 1.42, el: 21, yaw: -13 },
   { at: 0.11, dist: 1.0, el: 69, yaw: -2 },
   { at: 0.5, dist: 0.99, el: 72, yaw: 0 },
   { at: 0.9, dist: 1.0, el: 69, yaw: 2 },
@@ -81,8 +85,9 @@ const SHUT_FILL = { wide: 1.02, narrow: 1 };
  * wants to sit closer to the middle of the frame than the board does.
  */
 const SHUT_FRAME = {
-  wide: { x: -0.02, y: 0.03 },
-  narrow: { x: 0, y: 0.02 },
+  /* sat low, so the window and the town through it take the top of the frame */
+  wide: { x: -0.02, y: -0.16 },
+  narrow: { x: 0, y: -0.1 },
 };
 
 /** where the book sits on screen, as a fraction of the frame, per layout */
@@ -810,6 +815,11 @@ function Stage({ posts }: { posts: PostMeta[] }) {
       {/* the desk the book is shut on, the lamp standing over it, and the
           room's light level while the binding is still on its way */}
       <Essentials />
+      {/* the wall behind the desk and the town through its window — its own
+          boundary, so the lamp and the desk never wait on the engraving */}
+      <Suspense fallback={null}>
+        <Window />
+      </Suspense>
       <Lamps />
       <Intro />
 

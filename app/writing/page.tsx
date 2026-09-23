@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import SheetPlate from "@/components/SheetPlate";
 import { getPosts, formatDate } from "@/lib/blog";
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function WritingIndex() {
       <Link href="/" className="back-link">
         ← back to the notebook
       </Link>
+      <SheetPlate />
       <div className="sheet">
         <h1 className="h-lg">Writing</h1>
         <p className="page-lead" style={{ marginTop: "0.6rem" }}>

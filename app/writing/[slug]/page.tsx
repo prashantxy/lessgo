@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import SheetPlate from "@/components/SheetPlate";
 import { notFound } from "next/navigation";
 import { getPost, getPosts, formatDate } from "@/lib/blog";
 import { SITE, profile } from "@/content/site";
@@ -71,6 +72,7 @@ export default async function PostPage({
       <Link href="/writing" className="back-link">
         ← writing
       </Link>
+      <SheetPlate />
       <article className="sheet">
         <p className="post-meta">
           {formatDate(post.date)}
