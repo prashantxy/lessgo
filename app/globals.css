@@ -34,8 +34,8 @@
   --wonk: 2px;
   --wonk-2: 2px;
 
-  --font-hand: var(--font-hand), "Iowan Old Style", "Palatino Linotype", serif;
-  --font-sans: var(--font-sans), "Iowan Old Style", Georgia, serif;
+  --font-hand: var(--font-fell), "Iowan Old Style", "Palatino Linotype", serif;
+  --font-sans: var(--font-garamond), "Iowan Old Style", Georgia, serif;
 
   /* ink does not cast a hard offset shadow; parchment lifts softly */
   --shadow-hard: 0 10px 26px rgba(43, 33, 20, 0.28);
@@ -1162,6 +1162,16 @@ a:hover {
   padding: 0 1.25rem clamp(2rem, 7vh, 3.4rem);
   transition: opacity 0.55s var(--ease);
 }
+/* Until the scene has drawn a frame — its chunk still arriving, WebGL still
+   compiling shaders — nothing paints the dark room the caption is written for,
+   and pale type sits on the tan desk. Hold <html> at the scene's own NIGHT
+   until Intro.tsx hands the backdrop back (it sets data-room="day" at the
+   same moment it drops its own background, mid-dawn). If the scene never
+   runs, the shell's bail timer ends the boot and this stops matching. */
+html:has(.codex[data-boot="on"]):not([data-room="day"]) {
+  background: #0b0906;
+}
+
 .boot[data-state="out"] {
   opacity: 0;
 }
@@ -1183,6 +1193,7 @@ a:hover {
 .boot-caption {
   min-width: 8.5em;
   text-align: right;
+  white-space: nowrap;
 }
 .boot-rule {
   position: relative;

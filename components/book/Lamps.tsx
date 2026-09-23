@@ -5,6 +5,7 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { boot } from "./boot";
 import { ROOM_DIP, ROOM_NIGHT, applyRoom, readRoom, restoreRoom } from "./room";
+import { lampSwitch } from "./lampSwitch";
 import { bookScroll, wake } from "./state";
 
 /**
@@ -262,19 +263,6 @@ function buildLamp() {
  * that never changes.
  */
 export const lampBody: { group: THREE.Group | null } = { group: null };
-
-/**
- * Whether the lamp is burning. A mutable singleton and not React state, like
- * the scroll: the switch is DOM, the lamp is meshes, and putting the two on
- * the same `useState` would reconcile the whole canvas to turn a light off.
- */
-export const lampSwitch = { on: true };
-
-export function toggleLamp() {
-  lampSwitch.on = !lampSwitch.on;
-  wake();
-  return lampSwitch.on;
-}
 
 const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
 const smoothstep = (a: number, b: number, n: number) => {

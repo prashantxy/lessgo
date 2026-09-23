@@ -15,7 +15,14 @@ export default function LeaveNote() {
     `&body=${encodeURIComponent(clean + (who ? `\n\n— ${who}` : ""))}`;
 
   return (
-    <form className="leave-note" onSubmit={(e) => e.preventDefault()}>
+    <form
+      className="leave-note"
+      /* Enter in the name field should do what the button says, not nothing */
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (clean) window.location.href = mailto;
+      }}
+    >
       <span className="ln-title hand">leave a note</span>
       <input
         className="ln-field"

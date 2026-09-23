@@ -12,6 +12,8 @@ export type Post = PostMeta & { html: string };
 
 const DIR = path.join(process.cwd(), "content/blog");
 
+marked.setOptions({ gfm: true, breaks: false });
+
 function readAll(): { meta: PostMeta; raw: string }[] {
   if (!fs.existsSync(DIR)) return [];
   return fs
@@ -42,6 +44,5 @@ export function getPosts(): PostMeta[] {
 export function getPost(slug: string): Post | null {
   const found = readAll().find((p) => p.meta.slug === slug);
   if (!found) return null;
-  marked.setOptions({ gfm: true, breaks: false });
   return { ...found.meta, html: marked.parse(found.raw) as string };
 }

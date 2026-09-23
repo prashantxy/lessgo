@@ -19,6 +19,7 @@ export default function Music() {
   const stop = useCallback(() => {
     const r = ref.current;
     if (!r) return;
+    ref.current = null;
     r.master.gain.cancelScheduledValues(r.ctx.currentTime);
     r.master.gain.linearRampToValueAtTime(0.0001, r.ctx.currentTime + 0.6);
     setTimeout(() => {
@@ -31,7 +32,6 @@ export default function Music() {
         r.lfo.stop();
       } catch {}
       r.ctx.close();
-      ref.current = null;
     }, 700);
   }, []);
 
@@ -76,12 +76,13 @@ export default function Music() {
     ref.current = { ctx, master, nodes, lfo };
   }, []);
 
+  /* Side effects stay out of the state updater: React may call an updater
+     twice (StrictMode does, deliberately), which would open two contexts. The
+     ref is the source of truth for whether the pad is sounding. */
   const toggle = useCallback(() => {
-    setOn((v) => {
-      if (v) stop();
-      else start();
-      return !v;
-    });
+    if (ref.current) stop();
+    else start();
+    setOn(ref.current !== null);
   }, [start, stop]);
 
   useEffect(() => () => stop(), [stop]);

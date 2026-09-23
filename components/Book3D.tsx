@@ -9,7 +9,7 @@ import type { PostMeta } from "@/lib/format";
 import Music from "./Music";
 import { SPREADS, STOPS, TURNS, bookScroll, setSpread, wake } from "./book/state";
 import { boot, finishBoot, onBootDone, setBootPaint, skipBoot } from "./book/boot";
-import { lampSwitch, toggleLamp } from "./book/Lamps";
+import { lampSwitch, toggleLamp } from "./book/lampSwitch";
 import { buildSpreads, roman } from "./book/spreads";
 
 /* WebGL never runs on the server, and the model is fetched lazily either way */
@@ -267,9 +267,8 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
         end: "bottom bottom",
         scrub: reduce.matches ? true : 0.55,
         invalidateOnRefresh: true,
-        /* land on an opening rather than between two — the book has no
-           half-turned resting state */
-        /* SNAP-DISABLED-PROBE */
+        /* resting on an opening is native scroll-snap — see `.scroll-leaf`
+           in globals.css for why it is not ScrollTrigger's own snap */
         onUpdate: (self) => paint(self.progress),
         onRefresh: (self) => paint(self.progress),
       },

@@ -845,7 +845,9 @@ function BookSceneImpl({ posts }: { posts: PostMeta[] }) {
     <Canvas
       className="stage-canvas"
       frameloop="demand"
-      shadows
+      /* three r18x removed PCFSoftShadowMap, which is what a bare `shadows`
+         asks for; it falls back to PCF with a console warning. Ask for PCF. */
+      shadows="percentage"
       dpr={[1, 1.8]}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       camera={{ fov: 30, near: 0.02, far: 20, position: [0, 0.5, 0.7] }}

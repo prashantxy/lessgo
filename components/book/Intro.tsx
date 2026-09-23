@@ -48,6 +48,15 @@ const Progress = memo(function Progress() {
   return null;
 });
 
+/* <html> holds the night colour until the scene says otherwise (see the
+   `data-room` rule in globals.css), so there is no tan flash between the
+   first paint and the canvas's first frame. This is that "otherwise". */
+function handBackdrop(scene: THREE.Scene, s: { bgOn: boolean }) {
+  scene.background = null;
+  s.bgOn = false;
+  document.documentElement.dataset.room = "day";
+}
+
 function IntroImpl() {
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
@@ -64,7 +73,7 @@ function IntroImpl() {
     invalidate();
     return () => {
       /* whatever happened, the page is not left in the dark */
-      if (s.bgOn) scene.background = null;
+      if (s.bgOn) handBackdrop(scene, s);
       restoreRoom(scene);
     };
   }, [scene, invalidate, s]);
@@ -92,10 +101,7 @@ function IntroImpl() {
       const over = reduced ? 0.3 : TIMING.dawn;
       boot.dawn = smoothstep(0, over, since);
       if (since >= over) {
-        if (s.bgOn) {
-          scene.background = null;
-          s.bgOn = false;
-        }
+        if (s.bgOn) handBackdrop(scene, s);
         finishBoot();
         invalidate();
         return;
@@ -107,8 +113,7 @@ function IntroImpl() {
         /* by four fifths of the dawn the night colour has been lerped most of
            the way to the page's own, so handing the backdrop back to <html>
            here is a swap between two nearly identical browns */
-        scene.background = null;
-        s.bgOn = false;
+        handBackdrop(scene, s);
       } else {
         s.bg.copy(NIGHT).lerp(DAY, boot.dawn);
       }

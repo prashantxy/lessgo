@@ -1,13 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { EB_Garamond, IM_Fell_English } from "next/font/google";
 import { SITE, profile } from "@/content/site";
 import "./globals.css";
 
 /* The book is a 17th-century binding, so the page is set like one: Fell's
-   English for display, Garamond for reading. The CSS variables keep their old
-   names so every existing rule inherits the new voice. */
+   English for display, Garamond for reading. next/font writes its own
+   variables (--font-fell, --font-garamond); globals.css wraps them in the
+   --font-hand / --font-sans every rule uses, with fallbacks. They must not
+   share a name — a custom property defined as var() of itself on the same
+   element is a cycle, computes to nothing, and every rule falls through to
+   the system sans. */
 const hand = IM_Fell_English({
-  variable: "--font-hand",
+  variable: "--font-fell",
   subsets: ["latin"],
   weight: "400",
   style: ["normal", "italic"],
@@ -15,7 +19,7 @@ const hand = IM_Fell_English({
 });
 
 const sans = EB_Garamond({
-  variable: "--font-sans",
+  variable: "--font-garamond",
   subsets: ["latin"],
   display: "swap",
 });
@@ -72,6 +76,11 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
+};
+
+/* the browser chrome takes the desk's colour rather than a default white bar */
+export const viewport: Viewport = {
+  themeColor: "#0b0906",
 };
 
 export default function RootLayout({
