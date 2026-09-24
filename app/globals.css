@@ -2439,14 +2439,31 @@ html:has(.codex) {
   overscroll-behavior: contain;
   background: rgba(43, 33, 20, 0.55);
   backdrop-filter: blur(3px);
-  animation: overlay-in 0.22s var(--ease) both;
+  animation: overlay-in 0.45s var(--ease) both;
+  /* the sheet lifts off the book, which is below and behind it */
+  perspective: 1600px;
+  perspective-origin: 50% 100%;
 }
 @keyframes overlay-in {
   from {
     opacity: 0;
   }
 }
+.expand-overlay[data-closing] {
+  pointer-events: none;
+  animation: overlay-out 0.4s cubic-bezier(0.5, 0, 0.75, 0) 0.06s both;
+}
+@keyframes overlay-out {
+  to {
+    opacity: 0;
+  }
+}
 .expand-sheet {
+  position: relative;
+  /* the sheen below travels across it and must not show past its edges */
+  overflow: clip;
+  transform-origin: 50% 100%;
+  animation: sheet-lift 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
   width: min(62rem, 100%);
   background: var(--paper-2);
   border: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);
@@ -2489,6 +2506,239 @@ html:has(.codex) {
   -webkit-line-clamp: unset;
   line-clamp: unset;
   display: block;
+}
+
+/* ---- the sheet coming off the book, and going back into it ----
+   Open: the opening lifts up out of the book toward you — hinged at its foot,
+   the way a leaf is raised to the light — lands flat, a band of lamplight
+   crosses the paper once, and the writing inks in line by line after it.
+   Close: it sinks back the way it came, faster, with nothing to read on it.
+   Every property here is transform, opacity or clip-path, so none of it lays
+   the sheet out again mid-flight. */
+@keyframes sheet-lift {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 34vh, -240px) rotateX(58deg) scale(0.8);
+  }
+  45% {
+    opacity: 1;
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes sheet-sink {
+  to {
+    opacity: 0;
+    transform: translate3d(0, 28vh, -180px) rotateX(46deg) scale(0.86);
+  }
+}
+.expand-overlay[data-closing] .expand-sheet {
+  animation: sheet-sink 0.42s cubic-bezier(0.55, 0, 0.8, 0.3) both;
+}
+
+.expand-sheet::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 36%,
+    rgba(255, 240, 205, 0.34) 48%,
+    rgba(255, 250, 232, 0.5) 50%,
+    rgba(255, 240, 205, 0.34) 52%,
+    transparent 64%
+  );
+  transform: translateX(-110%);
+  animation: sheet-sheen 1.15s cubic-bezier(0.3, 0, 0.2, 1) 0.3s both;
+}
+@keyframes sheet-sheen {
+  to {
+    transform: translateX(110%);
+  }
+}
+
+/* line by line, each a beat after the one above it (--i is set on commit in
+   Book3D), and each drawn left to right like a pen crossing the line.
+   `backwards` and not `both`: once written, the clip comes off, so nothing
+   that overhangs its box — an italic, a descender — is left cut. */
+.expand-sheet :is(.folio-head, .folio-body > *, .title-page > *, .toc > li, .marginalia > li) {
+  animation: ink-in 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  animation-delay: calc(0.22s + var(--i, 0) * 50ms);
+}
+.expand-sheet .expand-back {
+  animation: ink-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.45s backwards;
+}
+@keyframes ink-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+    clip-path: inset(0 100% 0 0);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    transform: none;
+    clip-path: inset(0 0 0 0);
+  }
+}
+/* Coming off the spread instead (Book3D measures the pages and drives it with
+   the Web Animations API), so the CSS lift and sink stand down, and the
+   transform is worked out from the top-left corner. */
+.expand-overlay[data-morph] .expand-sheet {
+  transform-origin: 0 0;
+  animation: none;
+}
+/* and on the way back the overlay only clears its tint: fading its opacity
+   would fade the sheet with it, before it had reached the pages */
+.expand-overlay[data-morph][data-closing] {
+  animation: overlay-clear 0.46s cubic-bezier(0.4, 0, 0.6, 1) both;
+}
+@keyframes overlay-clear {
+  to {
+    background-color: rgba(43, 33, 20, 0);
+    backdrop-filter: blur(0);
+  }
+}
+/* the writing on the book's own pages steps aside while the sheet is off it,
+   and is back by the time the sheet lands */
+.leaf-html > * {
+  transition: opacity 0.3s var(--ease);
+}
+.codex[data-sheet="open"] .leaf-html > * {
+  opacity: 0;
+  transition-duration: 0.18s;
+}
+
+/* going back in, nothing is written or unwritten — the page just goes */
+.expand-overlay[data-closing] .expand-sheet *,
+.expand-overlay[data-closing] .expand-sheet::after {
+  animation: none;
+}
+
+/* While the sheet is up, what is under it holds still. It is behind a
+   backdrop blur, and a blur has to be recomputed every frame anything beneath
+   it moves — twenty drifting motes were costing a full-screen blur a frame to
+   animate something nobody could see. */
+.codex[data-sheet] :is(.motes i, .steam i, .board-open, .ribbon-tag) {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expand-sheet,
+  .expand-sheet *,
+  .expand-sheet::after {
+    animation: none !important;
+  }
+  .expand-overlay {
+    animation-duration: 0.2s;
+  }
+}
+
+/* ---- the steam off the coffee -------------------------------------------
+   DOM, not sprites: see book/steamTag.ts. The scene puts `.steam` on the
+   mug's rim and scales it to the mug, and the wisps are drawn at 1000 px to
+   the metre inside it — so each is a fixed-size box whose rise is a pure
+   transform the compositor runs on its own, and the WebGL loop can sleep. */
+.steam {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 0 0;
+}
+.steam i {
+  position: absolute;
+  /* 68 mm across at the top of its rise, centred on the rim */
+  left: -34px;
+  top: -34px;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(232, 220, 198, 0.9),
+    rgba(232, 220, 198, 0.35) 45%,
+    rgba(232, 220, 198, 0)
+  );
+  opacity: 0;
+  will-change: transform, opacity;
+  /* one rise every 6.25 s, six wisps a sixth of that apart */
+  animation: wisp 6.25s linear infinite;
+}
+.steam i:nth-child(2) {
+  animation-name: wisp-b;
+  animation-delay: -1.04s;
+}
+.steam i:nth-child(3) {
+  animation-delay: -2.08s;
+}
+.steam i:nth-child(4) {
+  animation-name: wisp-b;
+  animation-delay: -3.13s;
+}
+.steam i:nth-child(5) {
+  animation-delay: -4.17s;
+}
+.steam i:nth-child(6) {
+  animation-name: wisp-b;
+  animation-delay: -5.21s;
+}
+/* rising 85 mm, widening from 18 to 68 mm, brightest halfway up */
+@keyframes wisp {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0) scale(0.26);
+  }
+  25% {
+    opacity: 0.078;
+    transform: translate3d(2px, -25px, 0) scale(0.45);
+  }
+  50% {
+    opacity: 0.11;
+    transform: translate3d(-3px, -46px, 0) scale(0.63);
+  }
+  75% {
+    opacity: 0.078;
+    transform: translate3d(4px, -68px, 0) scale(0.82);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-2px, -89px, 0) scale(1);
+  }
+}
+@keyframes wisp-b {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0) scale(0.26);
+  }
+  25% {
+    opacity: 0.078;
+    transform: translate3d(-2px, -25px, 0) scale(0.45);
+  }
+  50% {
+    opacity: 0.11;
+    transform: translate3d(3px, -46px, 0) scale(0.63);
+  }
+  75% {
+    opacity: 0.078;
+    transform: translate3d(-4px, -68px, 0) scale(0.82);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(2px, -89px, 0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .steam {
+    display: none;
+  }
 }
 
 /* ---- phone: one leaf at a time, set larger ------------------------------ */

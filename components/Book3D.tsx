@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { about, highlights, now, profile } from "@/content/site";
@@ -12,7 +12,45 @@ import { SPREADS, STOPS, TURNS, bookScroll, setSpread, setTurner, wake } from ".
 import { boot, finishBoot, onBootDone, setBootPaint, skipBoot } from "./book/boot";
 import { lampSwitch, toggleLamp } from "./book/lampSwitch";
 import { ribbonTag } from "./book/ribbonTag";
+import { steamTag } from "./book/steamTag";
 import { buildSpreads, roman } from "./book/spreads";
+
+/**
+ * Where the open spread is on screen, if the sheet can come from it.
+ *
+ * The leaves are real DOM laid onto the book through a CSS3D transform, so
+ * their bounding boxes are the pages as the reader sees them. Only leaves
+ * mostly in view count — a phone reads one leaf and the other hangs off the
+ * edge — and none at all while the book is shut, mid-turn or diving, when
+ * there is no flat page for a sheet to lift off.
+ */
+function spreadRect(): DOMRect | null {
+  if (bookScroll.close > 0.05 || bookScroll.lift > 0.2 || bookScroll.dive > 0.05) return null;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  let l = Infinity;
+  let t = Infinity;
+  let r = -Infinity;
+  let b = -Infinity;
+  for (const el of document.querySelectorAll<HTMLElement>(".leaf-html")) {
+    const q = el.getBoundingClientRect();
+    const area = q.width * q.height;
+    const seen =
+      Math.max(0, Math.min(q.right, vw) - Math.max(q.left, 0)) *
+      Math.max(0, Math.min(q.bottom, vh) - Math.max(q.top, 0));
+    if (!area || seen / area < 0.5) continue;
+    l = Math.min(l, q.left);
+    t = Math.min(t, q.top);
+    r = Math.max(r, q.right);
+    b = Math.max(b, q.bottom);
+  }
+  return l < r ? new DOMRect(l, t, r - l, b - t) : null;
+}
+
+/** the transform that lays a box at `from` over the box at `to` */
+function onto(from: DOMRect, to: DOMRect) {
+  return `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${to.width / from.width}, ${to.height / from.height})`;
+}
 
 /* WebGL never runs on the server, and the model is fetched lazily either way */
 const BookScene = dynamic(() => import("./book/BookScene"), { ssr: false });
@@ -68,6 +106,80 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
   /* the one piece of React state here: opening the reading sheet is a real UI
      change, and <BookScene /> is memoised so the canvas sits it out */
   const [expanded, setExpanded] = useState(false);
+  /* …and whether it is on its way back into the book: the sheet stays
+     mounted for the length of its exit, then goes */
+  const [closing, setClosing] = useState(false);
+  const expandBtnRef = useRef<HTMLButtonElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const finishClose = useCallback(() => {
+    setExpanded(false);
+    setClosing(false);
+    /* back to where the reader was, not to the top of the document */
+    expandBtnRef.current?.focus({ preventScroll: true });
+  }, []);
+  const closeSheet = useCallback(() => {
+    if (bookScroll.reduced) {
+      finishClose();
+      return;
+    }
+    const sheet = sheetRef.current;
+    if (!sheet || sheet.dataset.closing) return;
+    sheet.dataset.closing = "true";
+    setClosing(true);
+    /* back down onto the pages it came off, if it came off them and they are
+       still there to land on; otherwise the CSS sink below takes it */
+    const to = overlayRef.current?.dataset.morph ? spreadRect() : null;
+    if (!to) {
+      delete overlayRef.current?.dataset.morph;
+      return;
+    }
+    /* measured untransformed, or a close during the lift would aim from a
+       box that is still in flight */
+    for (const a of sheet.getAnimations()) if (!(a instanceof CSSAnimation)) a.cancel();
+    const from = sheet.getBoundingClientRect();
+    sheet
+      .animate(
+        [
+          { transform: "none", opacity: 1 },
+          { opacity: 1, offset: 0.62 },
+          { transform: onto(from, to), opacity: 0 },
+        ],
+        { duration: 520, easing: "cubic-bezier(0.55, 0, 0.25, 1)", fill: "forwards" },
+      )
+      .finished.then(finishClose, () => {});
+  }, [finishClose]);
+
+  /* ---- the opening lifts off the book ----
+     A layout effect, so the sheet is measured and put back over the pages
+     before the first frame it is visible in. It is laid, untransformed, where
+     it will end up; then transformed onto the spread's own box and let go.
+     The pages themselves fade out underneath it (see .leaf-html in the CSS),
+     so what the eye follows is one sheet of paper coming off the book. */
+  useLayoutEffect(() => {
+    if (!expanded || bookScroll.reduced) return;
+    const sheet = sheetRef.current;
+    const overlay = overlayRef.current;
+    const to = spreadRect();
+    if (!sheet || !overlay || !to) return;
+    overlay.dataset.morph = "true";
+    const at = sheet.getBoundingClientRect();
+    sheet.animate(
+      [
+        { transform: onto(at, to), opacity: 0.35 },
+        { opacity: 1, offset: 0.28 },
+        { transform: "none", opacity: 1 },
+      ],
+      { duration: 760, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+    );
+  }, [expanded]);
+  /* animationend is the real signal; this is only for a tab that was hidden
+     mid-exit, where no animation frame ever runs to end it */
+  useEffect(() => {
+    if (!closing) return;
+    const t = window.setTimeout(finishClose, 700);
+    return () => clearTimeout(t);
+  }, [closing, finishClose]);
   /* ... and the landing sequence, which is three renders in its whole life:
      on, fading, gone. Everything it does in between is painted through refs. */
   const [boots, setBoots] = useState<"on" | "out" | "off">("on");
@@ -436,7 +548,7 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
     const onKey = (e: KeyboardEvent) => {
       if (boot.active || plateDialog.current?.open) return;
       if (expanded) {
-        if (e.key === "Escape") setExpanded(false);
+        if (e.key === "Escape") closeSheet();
         return;
       }
       const t = e.target as HTMLElement;
@@ -450,7 +562,7 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goSpread, expanded]);
+  }, [goSpread, expanded, closeSheet]);
 
   /* ---- turning by hand ----
           A drag across the open book with a mouse, or a sideways swipe on a
@@ -562,7 +674,11 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
   const allSpreads = useMemo(() => buildSpreads(posts), [posts]);
 
   return (
-    <div className="codex" data-boot={boots === "off" ? undefined : boots}>
+    <div
+      className="codex"
+      data-boot={boots === "off" ? undefined : boots}
+      data-sheet={expanded ? (closing ? "closing" : "open") : undefined}
+    >
       {/* The landing sequence's chrome. Rendered on the server as well, so the
           page arrives already in its loading state rather than showing a book
           for one frame and then covering it up. */}
@@ -592,6 +708,24 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
       {/* the binding — decorative chrome; the text on it is real DOM */}
       <div className="stage">
         <BookScene posts={posts} />
+      </div>
+
+      {/* the coffee's steam — DOM pinned to the mug by the scene, so the canvas
+          can sleep while it rises (see book/steamTag.ts) */}
+      <div
+        className="steam"
+        aria-hidden="true"
+        ref={(el) => {
+          steamTag.el = el;
+          wake();
+        }}
+      >
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
       </div>
 
       {/* the air above the desk — see .motes in globals.css for why this is
@@ -757,6 +891,7 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
 
       {/* read the open leaves as one plain sheet — the ⤢ from the old notebook */}
       <button
+        ref={expandBtnRef}
         type="button"
         className="expand-btn"
         onClick={() => setExpanded(true)}
@@ -767,19 +902,42 @@ export default function Book3D({ posts }: { posts: PostMeta[] }) {
 
       {expanded && (
         <div
+          ref={overlayRef}
           className="expand-overlay"
           role="dialog"
           aria-modal="true"
           aria-label="This opening, enlarged"
+          data-closing={closing || undefined}
           onClick={(e) => {
-            if (e.target === e.currentTarget) setExpanded(false);
+            if (e.target === e.currentTarget) closeSheet();
           }}
         >
-          <div className="expand-sheet">
-            <button type="button" className="expand-back" onClick={() => setExpanded(false)}>
+          <div
+            ref={sheetRef}
+            className="expand-sheet"
+            onAnimationEnd={(e) => {
+              /* its own exit, and not the sheen on its ::after, which
+                 reports as the sheet too */
+              if (closing && e.animationName === "sheet-sink") finishClose();
+            }}
+          >
+            <button type="button" className="expand-back" onClick={closeSheet} autoFocus>
               ← back to the book
             </button>
-            <div className="expand-cols">
+            <div
+              className="expand-cols"
+              /* Each line of the sheet is numbered for the ink-in stagger —
+                 set here, in the commit, so the first painted frame already
+                 has every line waiting at its own delay. Capped: past the
+                 fourteenth a line would be waiting on nothing anyone sees. */
+              ref={(el) => {
+                if (!el) return;
+                const lines = el.querySelectorAll<HTMLElement>(
+                  ".folio-head, .folio-body > *, .title-page > *, .toc > li, .marginalia > li",
+                );
+                lines.forEach((line, n) => line.style.setProperty("--i", String(Math.min(n, 14))));
+              }}
+            >
               {allSpreads[spreadRef.current]?.verso}
               {allSpreads[spreadRef.current]?.recto}
             </div>

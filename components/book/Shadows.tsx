@@ -18,13 +18,8 @@ import { shadowWork } from "./state";
  * maps are switched to manual, and they and the contact shadow are redrawn
  * only while `shadowWork` says a caster may have moved.
  *
- * The contact shadow is drei's, ported as it was, plus the gate and a list of
- * things to leave out of it (the steam: sprites are not shadow casters, but
- * drawn with the depth override they printed a smudge that would now freeze).
+ * The contact shadow is drei's, ported as it was, plus the gate.
  */
-
-/** objects kept out of the contact shadow; registered by whoever builds them */
-export const contactSkip: THREE.Object3D[] = [];
 
 type Props = {
   position: [number, number, number];
@@ -137,8 +132,6 @@ export default function Shadows({ position, scale, resolution, far, blur, opacit
     if (shadowWork.left <= 0) return;
     const background = scene.background;
     const override = scene.overrideMaterial;
-    const skipped = contactSkip.map((o) => o.visible);
-    for (const o of contactSkip) o.visible = false;
     kit.group.visible = false;
     scene.background = null;
     scene.overrideMaterial = kit.depth;
@@ -155,7 +148,6 @@ export default function Shadows({ position, scale, resolution, far, blur, opacit
     kit.group.visible = true;
     scene.overrideMaterial = override;
     scene.background = background;
-    contactSkip.forEach((o, i) => (o.visible = skipped[i]));
   });
 
   return <primitive object={kit.group} />;

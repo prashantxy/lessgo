@@ -883,6 +883,50 @@ function Book({ posts }: { posts: PostMeta[] }) {
 
 /* ------------------------------------------------------------------ scene */
 
+/**
+ * Steps the drawing buffer down on a machine that cannot keep up.
+ *
+ * The caps in `budget()` are a guess made before a single frame is drawn, and
+ * the wrong guess is the one that matters: an integrated GPU behind a 1.5×
+ * retina buffer drops frames on every scroll and the book turns in lurches.
+ * So this watches the frames that are actually drawn back to back — a scroll,
+ * a turn, the pen — and if they run slow it takes a quarter off the pixel
+ * ratio and watches again, down to 1. It never steps back up: a buffer that
+ * resizes itself in both directions flickers between the two.
+ *
+ * Only runs of consecutive frames count. The loop is on demand, so the first
+ * frame after a rest carries the whole rest as its delta, and the landing's
+ * first frames carry shader compiles and texture uploads that say nothing
+ * about how the machine scrolls.
+ */
+const SLOW_FRAME = 1 / 40;
+const SAMPLE = 45;
+
+function AdaptiveDpr({ from }: { from: number }) {
+  const setDpr = useThree((s) => s.setDpr);
+  const invalidate = useThree((s) => s.invalidate);
+  const s = useMemo(() => ({ dpr: from, times: [] as number[] }), [from]);
+
+  useFrame((_, dt) => {
+    if (boot.active || s.dpr <= 1) return;
+    /* a rest, not a frame: start the run again */
+    if (dt > 0.1) {
+      s.times.length = 0;
+      return;
+    }
+    s.times.push(dt);
+    if (s.times.length < SAMPLE) return;
+    const sorted = s.times.slice().sort((a, b) => a - b);
+    s.times.length = 0;
+    /* the median, so one hitch from a texture upload does not count */
+    if (sorted[SAMPLE >> 1] < SLOW_FRAME) return;
+    s.dpr = Math.max(1, Math.round((s.dpr - 0.25) * 100) / 100);
+    setDpr(s.dpr);
+    invalidate();
+  });
+  return null;
+}
+
 function Stage({ posts, shadow }: { posts: PostMeta[]; shadow: number }) {
   const invalidate = useThree((s) => s.invalidate);
 
@@ -994,6 +1038,11 @@ function budget() {
 
 function BookSceneImpl({ posts }: { posts: PostMeta[] }) {
   const { dpr, shadow } = useMemo(budget, []);
+  /* what the canvas will actually start at, for AdaptiveDpr to step down from */
+  const start = useMemo(
+    () => (typeof window === "undefined" ? 1 : Math.min(Math.max(dpr[0], window.devicePixelRatio), dpr[1])),
+    [dpr],
+  );
   return (
     <Canvas
       className="stage-canvas"
@@ -1009,6 +1058,7 @@ function BookSceneImpl({ posts }: { posts: PostMeta[] }) {
       }}
     >
       <Stage posts={posts} shadow={shadow} />
+      <AdaptiveDpr from={start} />
     </Canvas>
   );
 }

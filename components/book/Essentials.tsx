@@ -6,8 +6,8 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { boot } from "./boot";
 import { lampBody, showExceptLights } from "./Lamps";
-import { contactSkip } from "./Shadows";
 import { bookScroll, staleShadows, wake } from "./state";
+import { steamTag } from "./steamTag";
 import { brushed, dropPainted, glaze, leather, noteCard, paper } from "./textures";
 
 /**
@@ -98,30 +98,8 @@ export const DESK_FRAME = {
 const MUG_TOP = new THREE.Vector3(0.425, 0.084, 0.075);
 /** the inkwell, and the height of the ink in its neck */
 const WELL_AT = new THREE.Vector3(-0.04, 0.0315, -0.05);
-/** how many wisps are in the air at once */
-const WISPS = 6;
 
 /* ------------------------------------------------------------------ shapes */
-
-/**
- * One soft puff, for the steam. Drawn once at mount; a radial falloff on a
- * canvas is all a wisp is at this size.
- */
-function puffTexture() {
-  const c = document.createElement("canvas");
-  c.width = c.height = 64;
-  const g = c.getContext("2d");
-  if (!g) return null;
-  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0, "rgba(255,255,255,0.9)");
-  grad.addColorStop(0.45, "rgba(255,255,255,0.35)");
-  grad.addColorStop(1, "rgba(255,255,255,0)");
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 64, 64);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
 
 /** a surface of revolution from a [radius, height] profile */
 function lathe(profile: [number, number][], segments = 40) {
@@ -388,29 +366,6 @@ function buildDesk() {
   const handle = put(new THREE.TorusGeometry(0.0185, 0.0052, 10, 26), stone, mug, [0.045, 0.046, 0]);
   handle.scale.set(1, 1.15, 0.72);
 
-  /* ---- the coffee is still hot ----
-     A handful of sprites rising off the rim, each on its own slow loop. Kept
-     faint: steam you notice on the second look is a warm cup; steam you
-     notice first is a special effect. */
-  const puff = puffTexture();
-  const steam = new THREE.Group();
-  const wisps: THREE.Sprite[] = [];
-  for (let i = 0; i < WISPS; i++) {
-    const m = new THREE.SpriteMaterial({
-      map: puff ?? undefined,
-      color: 0xe8dcc6,
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-    });
-    const w = new THREE.Sprite(m);
-    w.raycast = () => {};
-    steam.add(w);
-    wisps.push(w);
-  }
-  steam.position.copy(MUG_TOP);
-  clutter.add(steam);
-
   /* ---- the leaves, and the letter they are lying on ---- */
   const leaves = part(clutter, [0.402, 0, -0.112], -0.24);
   put(slab(0.15, 0.195, 0.0016, 0.002), blank, leaves, [0.004, 0, 0.002], [0, 0.06, 0], false);
@@ -481,10 +436,7 @@ function buildDesk() {
     streak,
     ripple,
     rippleMat,
-    wisps,
-    steam,
     spark,
-    puff,
   };
 }
 
@@ -534,8 +486,8 @@ export default function Essentials() {
       dip: false,
       /* 0..1 through the ripple the dip sets off; 1 is still */
       ring: 1,
-      /* seconds of steam, for the wisps' loops */
-      t: 0,
+      /* where the steam was last put on screen, so a still frame writes nothing */
+      steamAt: "",
       ray: new THREE.Raycaster(),
       ndc: new THREE.Vector2(),
       desk: new THREE.Plane(new THREE.Vector3(0, 1, 0), -DESK_Y),
@@ -698,36 +650,55 @@ export default function Essentials() {
   }, [camera, gl, cur, desk, router]);
 
   useEffect(() => {
-    /* steam moves every frame and casts nothing; keep it out of the contact
-       shadow, which is now only redrawn when something that casts has moved */
-    contactSkip.push(desk.steam);
     return () => {
-      contactSkip.splice(contactSkip.indexOf(desk.steam), 1);
       for (const m of [...desk.fade, ...desk.fixed]) m.dispose();
       for (const g of desk.geos) g.dispose();
       for (const p of desk.painted) dropPainted(p);
       desk.streak.dispose();
       desk.rippleMat.dispose();
-      desk.puff?.dispose();
-      for (const w of desk.wisps) w.material.dispose();
     };
   }, [desk]);
 
-  /* ---- the room is alive while you are looking at it ----
-     The canvas renders on demand, so steam and a ripple would freeze the
-     moment nothing else asked for a frame. This asks, at a steady thirty a
-     second — and only while the desk is in shot, the reader has not asked for
-     stillness, and the tab is showing. Once the book is open the desk is out
-     of frame and the loop goes back to sleeping. */
+  /* No clock of its own any more. The steam used to be sprites, and to keep
+     them rising this asked the canvas for thirty frames a second for as long
+     as the desk was in shot — the whole binding, desk and room redrawn to move
+     six faint puffs. The steam is DOM now (see .steam in globals.css), so the
+     only things here that animate on their own — the ripple and the pen
+     settling — ask for their own frames and stop when they are done. */
   const invalidate = useThree((s) => s.invalidate);
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      if (document.hidden || bookScroll.reduced || !bookScroll.roomy) return;
-      if (bookScroll.close < 0.6) return;
-      invalidate();
-    }, 1000 / 30);
-    return () => clearInterval(id);
-  }, [invalidate]);
+  const size = useThree((s) => s.size);
+  const probe = useMemo(() => ({ at: new THREE.Vector3(), side: new THREE.Vector3() }), []);
+
+  /** pin the DOM steam to the mug's rim, at the mug's scale */
+  const placeSteam = (here: number) => {
+    const el = steamTag.el;
+    if (!el) return;
+    /* it rises with the room, not ahead of it */
+    const level = here * (boot.active ? boot.dawn : 1);
+    if (level < 0.01 || bookScroll.reduced) {
+      if (cur.steamAt !== "off") {
+        cur.steamAt = "off";
+        el.style.opacity = "0";
+      }
+      return;
+    }
+    const a = probe.at.copy(MUG_TOP).project(camera);
+    /* ten centimetres along the camera's own right, for how big a metre is */
+    const b = probe.side
+      .setFromMatrixColumn(camera.matrixWorld, 0)
+      .multiplyScalar(0.1)
+      .add(MUG_TOP)
+      .project(camera);
+    const x = size.left + ((a.x + 1) / 2) * size.width;
+    const y = size.top + ((1 - a.y) / 2) * size.height;
+    const perM = Math.hypot(((b.x - a.x) / 2) * size.width, ((b.y - a.y) / 2) * size.height) * 10;
+    /* the wisps are drawn at 1000 px to the metre (see .steam i) */
+    const key = `${x.toFixed(1)},${y.toFixed(1)},${(perM / 1000).toFixed(4)},${level.toFixed(2)}`;
+    if (key === cur.steamAt) return;
+    cur.steamAt = key;
+    el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${(perM / 1000).toFixed(4)})`;
+    el.style.opacity = level.toFixed(2);
+  };
 
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.1);
@@ -746,6 +717,7 @@ export default function Essentials() {
       cur.shown = show;
       showExceptLights(desk.clutter, show);
     }
+    placeSteam(show ? here : 0);
     if (!show) {
       /* the pen is the desk's cursor, and there is no desk */
       if (cur.on) {
@@ -761,17 +733,6 @@ export default function Essentials() {
       m.opacity = here;
     }
 
-    /* ---- steam ---- */
-    const still = bookScroll.reduced;
-    if (!still) cur.t += dt;
-    desk.wisps.forEach((w, i) => {
-      const phase = (cur.t * 0.16 + i / WISPS) % 1;
-      const sway = Math.sin(cur.t * 0.8 + i * 1.7) * 0.007 * phase;
-      w.position.set(sway, 0.004 + phase * 0.085, Math.cos(cur.t * 0.6 + i) * 0.003 * phase);
-      w.scale.setScalar(0.018 + phase * 0.05);
-      w.material.opacity = still ? 0 : 0.11 * Math.sin(Math.PI * phase) * here;
-    });
-
     /* ---- the ripple ---- */
     if (cur.ring < 1) {
       cur.ring = Math.min(1, cur.ring + dt / 1.2);
@@ -779,6 +740,7 @@ export default function Essentials() {
       desk.ripple.visible = cur.ring < 1;
       desk.ripple.scale.setScalar(0.002 + k * 0.0155);
       desk.rippleMat.opacity = 0.45 * (1 - cur.ring) * here;
+      invalidate();
     }
 
     /* ---- the note, when the pointer is on it ----
@@ -813,7 +775,10 @@ export default function Essentials() {
       Math.abs(p.position.x + cur.nib.x - cur.to.x) +
       Math.abs(p.position.y + cur.nib.y - cur.to.y) +
       Math.abs(p.position.z + cur.nib.z - cur.to.z);
-    if (off > 2e-5) staleShadows();
+    if (off > 2e-5) {
+      staleShadows();
+      invalidate();
+    }
     p.position.set(
       damp(p.position.x + cur.nib.x, cur.to.x, lambda, dt) - cur.nib.x,
       damp(p.position.y + cur.nib.y, cur.to.y, lambda, dt) - cur.nib.y,
