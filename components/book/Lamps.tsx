@@ -251,7 +251,24 @@ function buildLamp() {
   halo.userData.boot = true;
   group.add(halo);
 
-  return { group, materials, brass, iron, filament, inner, beamMat, spot, halo, lit: 1 };
+  return { group, materials, brass, iron, filament, inner, beamMat, spot, halo, lit: 1, shown: true };
+}
+
+/**
+ * Hide or show everything under `group` except its lights.
+ *
+ * For anything that carries a light and comes and goes: setting `visible` on
+ * the group drops the light out of the scene's count, and three compiles that
+ * count into every lit material's program — one toggle recompiles the room.
+ * The caller drives the light's intensity to 0 instead.
+ */
+export function showExceptLights(group: THREE.Object3D, on: boolean) {
+  for (const o of group.children) {
+    if ((o as THREE.Light).isLight) continue;
+    /* a part carrying a light is opened up rather than hidden whole */
+    if (o.children.some((c) => (c as THREE.Light).isLight)) showExceptLights(o, on);
+    else o.visible = on;
+  }
 }
 
 /**
@@ -315,8 +332,22 @@ export default function Lamps() {
     lamp.lit = bookScroll.reduced ? on : damp(lamp.lit, on, 24, dt);
     if (Math.abs(lamp.lit - on) > 1e-3) wake();
 
-    lamp.group.visible = here > 0.002;
-    if (!lamp.group.visible) return;
+    /* The lamp's body goes, but its two lights stay in the scene at nothing.
+       Hiding the group would take them with it, and the number of lights is
+       compiled into every lit material's shader — so each time the covers
+       lifted, every material in the scene was rebuilt, mid-scroll. */
+    const shown = here > 0.002;
+    if (shown !== lamp.shown) {
+      lamp.shown = shown;
+      showExceptLights(lamp.group, shown);
+      /* and its shadow map stops being redrawn with nothing to throw it */
+      lamp.spot.shadow.autoUpdate = shown;
+    }
+    if (!shown) {
+      lamp.spot.intensity = 0;
+      lamp.halo.intensity = 0;
+      return;
+    }
 
     /* The environment is what makes polished brass read, and the room's share
        of it moves by a factor of ten across the landing: dipped for the wait,

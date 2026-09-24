@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, Environment, Html, Lightformer, useGLTF } from "@react-three/drei";
+import { Environment, Html, Lightformer, useGLTF } from "@react-three/drei";
 import { Suspense, memo, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import * as THREE from "three";
 import type { PostMeta } from "@/lib/format";
@@ -11,6 +11,7 @@ import Window from "./Window";
 import Essentials, { DESK_FRAME } from "./Essentials";
 import Lamps, { LAMP_BACK, LAMP_TOP } from "./Lamps";
 import Ribbon from "./Ribbon";
+import Shadows from "./Shadows";
 import { boot } from "./boot";
 import { buildSpreads } from "./spreads";
 import {
@@ -19,6 +20,7 @@ import {
   bookScroll,
   getSpread,
   setInvalidate,
+  staleShadows,
   subscribeSpread,
   turnBy,
   wake,
@@ -859,6 +861,9 @@ function Book({ posts }: { posts: PostMeta[] }) {
 
     if (moving || retargeted) {
       s.settle = 2;
+      /* leaves, boards and the settling drop all cast; the camera alone does
+         not, but it only ever moves with them */
+      staleShadows();
       invalidate();
     } else if (s.settle > 0) {
       s.settle--;
@@ -946,7 +951,7 @@ function Stage({ posts, shadow }: { posts: PostMeta[]; shadow: number }) {
           left the shadow volume the moment it came off the desk, the halo
           vanished, and the book read as pasted onto the page for the whole
           length of the fold. */}
-      <ContactShadows
+      <Shadows
         position={[0, -0.003, 0]}
         scale={2.1}
         resolution={shadow}
@@ -981,7 +986,10 @@ function budget() {
       window.matchMedia("(pointer: coarse)").matches);
   return small
     ? { dpr: [1, 1.5] as [number, number], shadow: 256 }
-    : { dpr: [1, 1.8] as [number, number], shadow: 512 };
+    : /* 1.5 and not 1.8: on a retina laptop that is 30% fewer pixels through
+         a fragment shader carrying eight lights, and at this framing the
+         difference is not visible past the antialiasing */
+      { dpr: [1, 1.5] as [number, number], shadow: 512 };
 }
 
 function BookSceneImpl({ posts }: { posts: PostMeta[] }) {

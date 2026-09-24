@@ -88,7 +88,25 @@ export function setInvalidate(fn: (() => void) | null) {
 }
 
 export function wake() {
+  staleShadows();
   invalidate?.();
+}
+
+/* --- shadow freshness -------------------------------------------------------
+   Waking the loop is not the same as moving something. The steam on the
+   landing asks for thirty frames a second and moves nothing that casts, and
+   redrawing two shadow maps and the contact shadow for each of those frames
+   was three quarters of the landing's GPU time. So the shadow passes only run
+   while this says something that casts may have moved; Shadows.tsx reads it.
+
+   A count of frames and not a flag: the contact shadow is drawn in a useFrame
+   that can run before the one that moved a caster, so a move has to buy the
+   frame after it as well. */
+
+export const shadowWork = { left: 2 };
+
+export function staleShadows() {
+  shadowWork.left = 2;
 }
 
 /* --- turning by hand -------------------------------------------------------

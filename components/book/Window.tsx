@@ -6,7 +6,8 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { gallery, type GalleryItem } from "@/content/gallery";
 import { boot } from "./boot";
-import { bookScroll } from "./state";
+import { showExceptLights } from "./Lamps";
+import { bookScroll, wake } from "./state";
 
 /**
  * The study window, and the town outside it.
@@ -465,11 +466,13 @@ export default function Window() {
       (o as THREE.Mesh).raycast = noRaycast;
     });
 
-    return { group, townMat, skyMat, glassMat, shaftMat, dusk, moon, moonMat, night: nightness(), lit: -1 };
+    return { group, townMat, skyMat, glassMat, shaftMat, dusk, moon, moonMat, night: nightness(), lit: -1, shown: true };
   }, [town, prints]);
 
   useEffect(() => {
     const { group } = built;
+    /* it arrives after the rest of the room, and its frame and sill cast */
+    wake();
     return () => {
       group.traverse((o) => {
         const mesh = o as THREE.Mesh;
@@ -485,9 +488,21 @@ export default function Window() {
 
   useFrame(() => {
     /* only while the wall can be in shot */
+    /* The wall goes, the dusk spot stays in the scene at nothing — hiding it
+       would change the light count every lit shader is compiled against, and
+       rebuild them all the moment the book lay open (see showExceptLights). */
     const here = bookScroll.close > 0.02;
-    built.group.visible = here;
-    if (!here) return;
+    if (here !== built.shown) {
+      built.shown = here;
+      showExceptLights(built.group, here);
+      /* coming back, everything below has to be written again — including
+         the moon, which showing the group has just made visible */
+      built.lit = -1;
+    }
+    if (!here) {
+      built.dusk.intensity = 0;
+      return;
+    }
 
     /* While the binding is still arriving the room is dark and the lamp is the
        light it is read by, so the town is deep in dusk; it comes up with the

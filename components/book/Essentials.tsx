@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { boot } from "./boot";
-import { lampBody } from "./Lamps";
-import { bookScroll, wake } from "./state";
+import { lampBody, showExceptLights } from "./Lamps";
+import { contactSkip } from "./Shadows";
+import { bookScroll, staleShadows, wake } from "./state";
 import { brushed, dropPainted, glaze, leather, noteCard, paper } from "./textures";
 
 /**
@@ -50,6 +51,8 @@ const DESK_Y = 0.0052;
  * the object. A millimetre and a half of air reads as a hand holding it there.
  */
 const PEN_HOVER = 0.018;
+/** the pen's own small light, while it is out */
+const SPARK = 0.01;
 /**
  * The nib's tip, in the pen's own frame — the point that sits under the
  * pointer.
@@ -324,14 +327,13 @@ function buildDesk() {
      Turned as one profile: a barrel that tapers both ways is what separates a
      pen from a dowel, and it is four extra points to say so. */
   const pen = part(clutter, [0, 0, 0], PEN_TURN);
-  pen.visible = false;
   /* A cursor has to be legible everywhere it can go, and half the desk is
      outside the lamp's pool. So the pen carries its own small light — which
      doubles as the thing that makes it read as being *over* the surface
      rather than drawn on top of it, because it lights the surface under the
      nib. Flagged `boot` so the room dimmer leaves it alone: this one is not
      part of the room. */
-  const spark = new THREE.PointLight(0xffd9a6, 0.01, 0.14, 2);
+  const spark = new THREE.PointLight(0xffd9a6, 0, 0.14, 2);
   spark.position.set(PEN_NIB * 0.85, 0.01, 0);
   spark.userData.boot = true;
   pen.add(spark);
@@ -480,6 +482,8 @@ function buildDesk() {
     ripple,
     rippleMat,
     wisps,
+    steam,
+    spark,
     puff,
   };
 }
@@ -522,6 +526,8 @@ export default function Essentials() {
     return {
       on: false,
       seen: false,
+      /* whether the clutter is showing, so it is only toggled on a change */
+      shown: true,
       link: false,
       lift: 0,
       /* over the inkwell: the nib goes into the ink */
@@ -692,7 +698,11 @@ export default function Essentials() {
   }, [camera, gl, cur, desk, router]);
 
   useEffect(() => {
+    /* steam moves every frame and casts nothing; keep it out of the contact
+       shadow, which is now only redrawn when something that casts has moved */
+    contactSkip.push(desk.steam);
     return () => {
+      contactSkip.splice(contactSkip.indexOf(desk.steam), 1);
       for (const m of [...desk.fade, ...desk.fixed]) m.dispose();
       for (const g of desk.geos) g.dispose();
       for (const p of desk.painted) dropPainted(p);
@@ -730,14 +740,20 @@ export default function Essentials() {
        from under the right-hand board. So it goes with the book. */
     desk.blotter.position.x = -CENTRE * (1 - smoothstep(0, 1, bookScroll.close));
 
-    desk.clutter.visible = show;
+    /* Everything but the pen's own light, which stays in the scene at nothing
+       — its count is compiled into every lit shader (see showExceptLights). */
+    if (show !== cur.shown) {
+      cur.shown = show;
+      showExceptLights(desk.clutter, show);
+    }
     if (!show) {
       /* the pen is the desk's cursor, and there is no desk */
       if (cur.on) {
         cur.on = false;
         document.body.style.cursor = "";
       }
-      desk.pen.visible = false;
+      showExceptLights(desk.pen, false);
+      desk.spark.intensity = 0;
       return;
     }
     for (const m of desk.fade) {
@@ -782,7 +798,8 @@ export default function Essentials() {
        cannot lag. The first frame after it appears is snapped outright, so it
        does not fly in across the desk from wherever it was last seen. */
     const p = desk.pen;
-    p.visible = cur.on;
+    showExceptLights(p, cur.on);
+    desk.spark.intensity = cur.on ? SPARK : 0;
     if (!cur.on) return;
     p.rotation.copy(cur.euler);
     if (!cur.seen) {
@@ -791,6 +808,12 @@ export default function Essentials() {
       return;
     }
     const lambda = 38;
+    /* the pen casts, so while it is still travelling the shadows follow it */
+    const off =
+      Math.abs(p.position.x + cur.nib.x - cur.to.x) +
+      Math.abs(p.position.y + cur.nib.y - cur.to.y) +
+      Math.abs(p.position.z + cur.nib.z - cur.to.z);
+    if (off > 2e-5) staleShadows();
     p.position.set(
       damp(p.position.x + cur.nib.x, cur.to.x, lambda, dt) - cur.nib.x,
       damp(p.position.y + cur.nib.y, cur.to.y, lambda, dt) - cur.nib.y,
